@@ -45,6 +45,13 @@ include 'views/header.php';
 <div class="container">
     <article style="max-width: 800px; margin: 0 auto;">
         <header style="text-align: center; margin-bottom: 2rem; border-bottom: 2px solid #eee; padding-bottom: 1rem;">
+            <?php if ($book['cover_image']): ?>
+                <div style="margin-bottom: 1rem;">
+                    <img src="<?= COVERS_URL . e($book['cover_image']) ?>" 
+                        alt="<?= e($book['title']) ?>" 
+                        style="max-width: 200px; height: auto; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+                </div>
+            <?php endif; ?>
             <h1 style="margin-bottom: 0.5rem;"><?= e($book['title']) ?></h1>
             
             <?php if ($book['genre']): ?>

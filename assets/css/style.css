@@ -617,3 +617,24 @@ input:not([type="checkbox"], [type="radio"]), select {
         min-width: auto;
     }
 }
+/* assets/css/style.css - добавить */
+.book-cover {
+    transition: transform 0.3s ease;
+}
+
+.book-cover:hover {
+    transform: scale(1.05);
+}
+
+.cover-placeholder {
+    width: 120px;
+    height: 160px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 2rem;
+    margin: 0 auto 1rem;
+}

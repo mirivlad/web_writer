@@ -35,13 +35,14 @@ CREATE TABLE `books` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   `share_token` varchar(32) DEFAULT NULL,
+  `published` tinyint(1) NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`),
   UNIQUE KEY `share_token` (`share_token`),
   KEY `user_id` (`user_id`),
   KEY `series_id` (`series_id`),
   CONSTRAINT `books_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
   CONSTRAINT `books_ibfk_2` FOREIGN KEY (`series_id`) REFERENCES `series` (`id`) ON DELETE SET NULL
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -50,7 +51,7 @@ CREATE TABLE `books` (
 
 LOCK TABLES `books` WRITE;
 /*!40000 ALTER TABLE `books` DISABLE KEYS */;
-INSERT INTO `books` VALUES (3,'Между нами','','Фантастика',NULL,1,NULL,NULL,'2025-11-20 04:25:52','2025-11-20 04:25:52','3db8c6c60825c3e117c5cd91bc613697');
+INSERT INTO `books` VALUES (3,'Между нами','Описание книги','Фантастика','cover_3_1763628714.jpg',1,NULL,NULL,'2025-11-20 04:25:52','2025-11-20 08:51:54','3db8c6c60825c3e117c5cd91bc613697',1);
 /*!40000 ALTER TABLE `books` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -161,7 +162,7 @@ CREATE TABLE `users` (
   `is_active` tinyint(1) DEFAULT 0,
   PRIMARY KEY (`id`),
   UNIQUE KEY `username` (`username`)
-) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -170,7 +171,7 @@ CREATE TABLE `users` (
 
 LOCK TABLES `users` WRITE;
 /*!40000 ALTER TABLE `users` DISABLE KEYS */;
-INSERT INTO `users` VALUES (1,'mirivlad','M.I.R.V.','$2y$10$fDzdULKndRGKiNESXpny8eqUUsoxGbOTeWhX8TvUjrlrT7F/pbzJm','mirvtop@yandex.ru','2025-11-19 03:54:48','2025-11-20 06:34:27',1),(3,'TEST','TEST','$2y$10$TGnFqS84R0XQBLF.Xkgy0OzrvrDOIhaD1lQtTPUZ0NOxq6HAD4KT6','test@test.com','2025-11-20 06:26:31',NULL,0),(4,'testuser','TEST','$2y$10$A.VCH2KNu/LbwqBTdRzGl.GiKUJIw3OYNOFck9IYlJz1kTyJV.cZq','test2@test.com','2025-11-20 06:28:36',NULL,0),(5,'TEST3','TEST3','$2y$10$f5FZPGn.rICZLrgtUl.ufOAWPRaUMMcy7aRRlErlK8/ONLHgANEEa','test3@test.com','2025-11-20 06:29:38',NULL,0),(6,'mirivlad1','111','$2y$10$xBXoaFezYIa5eafOJIZUCOn5/FI6OXjWylMY7cFUtKv6HiFttfSAm','111@123.com','2025-11-20 06:34:46',NULL,0);
+INSERT INTO `users` VALUES (1,'mirivlad','M.I.R.V.','$2y$10$fDzdULKndRGKiNESXpny8eqUUsoxGbOTeWhX8TvUjrlrT7F/pbzJm','mirvtop@yandex.ru','2025-11-19 03:54:48','2025-11-20 06:34:27',1),(7,'Kate','Kate','$2y$10$gly0AhS9uUk5W1YsM45aPOAd0Dq1tL44jjsse7Z8nbDZBbtTu5opC','cea@profl.ru','2025-11-20 06:57:01','2025-11-20 08:43:31',1);
 /*!40000 ALTER TABLE `users` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
@@ -183,4 +184,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-11-20  9:37:47
+-- Dump completed on 2025-11-20 12:13:42

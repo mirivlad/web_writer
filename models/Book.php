@@ -120,5 +120,26 @@ class Book {
         $stmt->execute([$book_id]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
+
+    public function updateCover($book_id, $filename) {
+        $stmt = $this->pdo->prepare("UPDATE books SET cover_image = ? WHERE id = ?");
+        return $stmt->execute([$filename, $book_id]);
+    }
+
+    public function deleteCover($book_id) {
+        // Сначала получаем текущее имя файла
+        $book = $this->findById($book_id);
+        $old_filename = $book['cover_image'];
+        
+        if ($old_filename) {
+            $file_path = COVERS_PATH . $old_filename;
+            if (file_exists($file_path)) {
+                unlink($file_path);
+            }
+        }
+        
+        $stmt = $this->pdo->prepare("UPDATE books SET cover_image = NULL WHERE id = ?");
+        return $stmt->execute([$book_id]);
+    }
 }
 ?>

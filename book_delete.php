@@ -30,7 +30,12 @@ if (!$bookModel->userOwnsBook($book_id, $user_id)) {
 
 // Получаем информацию о книге перед удалением (для сообщения)
 $book = $bookModel->findById($book_id);
-
+if (!empty($book['cover_image'])) {
+    $cover_path = COVERS_PATH . $book['cover_image'];
+    if (file_exists($cover_path)) {
+        unlink($cover_path);
+    }
+}
 // Удаляем книгу
 if ($bookModel->delete($book_id, $user_id)) {
     $_SESSION['success'] = "Книга «" . e($book['title']) . "» успешно удалена";

@@ -14,6 +14,13 @@ define('SITE_URL', 'https://writer.mirv.top');
 // Настройки приложения
 define('APP_NAME', 'Web Writer');
 define('UPLOAD_PATH', __DIR__ . '/../uploads/');
+define('COVERS_PATH', UPLOAD_PATH . 'covers/');
+define('COVERS_URL', SITE_URL . '/uploads/covers/');
+
+// Создаем папку для загрузок, если ее нет
+// if (!file_exists(COVERS_PATH)) {
+//     mkdir(COVERS_PATH, 0765, true);
+// }
 
 // Подключение к базе данных
 try {

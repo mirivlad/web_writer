@@ -2,6 +2,8 @@
 require_once 'config/config.php';
 require_login();
 
+// Подключаем функции для обложек
+
 $user_id = $_SESSION['user_id'];
 $bookModel = new Book($pdo);
 
@@ -20,6 +22,7 @@ if ($book_id) {
 }
 
 // Обработка формы
+$cover_error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!verify_csrf_token($_POST['csrf_token'] ?? '')) {
         $_SESSION['error'] = "Ошибка безопасности";
@@ -40,6 +43,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'user_id' => $user_id
         ];
         $data['published'] = isset($_POST['published']) ? 1 : 0;
+        
+        // Обработка загрузки обложки
+        if (isset($_FILES['cover_image']) && $_FILES['cover_image']['error'] === UPLOAD_ERR_OK) {
+            $cover_result = handleCoverUpload($_FILES['cover_image'], $book_id);
+            if ($cover_result['success']) {
+                $bookModel->updateCover($book_id, $cover_result['filename']);
+                // Обновляем данные книги
+                $book = $bookModel->findById($book_id);
+            } else {
+                $cover_error = $cover_result['error'];
+            }
+        }
+        
+        // Обработка удаления обложки
+        if (isset($_POST['delete_cover']) && $_POST['delete_cover'] == '1') {
+            $bookModel->deleteCover($book_id);
+            $book = $bookModel->findById($book_id);
+        }
         
         if ($is_edit) {
             $success = $bookModel->update($book_id, $data);
@@ -67,16 +88,9 @@ $page_title = $is_edit ? "Редактирование книги" : "Созда
 include 'views/header.php';
 ?>
 
-<h1><?= $is_edit ? "Редактирование книги" : "Создание новой книги" ?></h1>
+<!-- Остальная часть формы остается той же, но добавляем поле обложки -->
 
-<?php if (isset($_SESSION['error'])): ?>
-    <div class="alert alert-error">
-        <?= e($_SESSION['error']) ?>
-        <?php unset($_SESSION['error']); ?>
-    </div>
-<?php endif; ?>
-
-<form method="post">
+<form method="post" enctype="multipart/form-data">
     <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
     
     <div style="max-width: 100%; margin-bottom: 0.5rem;">
@@ -97,15 +111,50 @@ include 'views/header.php';
                placeholder="Например: Фантастика, Роман, Детектив..."
                style="width: 100%; margin-bottom: 1.5rem;">
         
+        <!-- ПОЛЕ ДЛЯ ОБЛОЖКИ -->
+        <div style="margin-bottom: 1.5rem;">
+            <label for="cover_image" style="display: block; margin-bottom: 0.5rem; font-weight: bold;">
+                Обложка книги
+            </label>
+            
+            <?php if (!empty($book['cover_image'])): ?>
+                <div style="margin-bottom: 1rem;">
+                    <p><strong>Текущая обложка:</strong></p>
+                    <img src="<?= COVERS_URL . e($book['cover_image']) ?>" 
+                         alt="Обложка" 
+                         style="max-width: 200px; height: auto; border-radius: 4px; border: 1px solid #ddd;">
+                    <div style="margin-top: 0.5rem;">
+                        <label style="display: inline-flex; align-items: center; gap: 0.5rem;">
+                            <input type="checkbox" name="delete_cover" value="1">
+                            Удалить обложку
+                        </label>
+                    </div>
+                </div>
+            <?php endif; ?>
+            
+            <input type="file" id="cover_image" name="cover_image" 
+                   accept="image/jpeg, image/png, image/gif, image/webp"
+                   style="height: 2.6rem;">
+            <small style="color: #666;">
+                Разрешены: JPG, PNG, GIF, WebP. Максимальный размер: 5MB.
+                Рекомендуемый размер: 300×450 пикселей.
+            </small>
+            
+            <?php if (!empty($cover_error)): ?>
+                <div style="color: #d32f2f; margin-top: 0.5rem;">
+                    ❌ <?= e($cover_error) ?>
+                </div>
+            <?php endif; ?>
+        </div>
+        
         <label for="description" style="display: block; margin-bottom: 0.5rem; font-weight: bold;">
             Описание книги
         </label>
         <textarea id="description" name="description" 
                   placeholder="Краткое описание сюжета или аннотация..." 
                   rows="6"
-                  style="width: 100%;">
-                  <?= e($book['description'] ?? $_POST['description'] ?? '') ?>
-        </textarea>
+                  style="width: 100%;"><?= e($book['description'] ?? $_POST['description'] ?? '') ?></textarea>
+        
         <div>
             <label for="published">
                 <input type="checkbox" id="published" name="published" value="1"
@@ -116,7 +165,7 @@ include 'views/header.php';
     </div>
     
     <div style="display: flex; gap: 5px; flex-wrap: wrap; align-items: center;">
-        <button type="submit" class="contrast compact-button" >
+        <button type="submit" class="contrast compact-button">
             <?= $is_edit ? '💾 Сохранить изменения' : '📖 Создать книгу' ?>
         </button>
     </div>

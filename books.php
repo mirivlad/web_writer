@@ -45,28 +45,19 @@ include 'views/header.php';
         <a href="book_edit.php" role="button">📖 Создать первую книгу</a>
     </article>
 <?php else: ?>
-    <div class="grid">
+    <div class="flex">
         <?php foreach ($books as $book): ?>
         <article>
-            <header>
-                <h3><?= e($book['title']) ?></h3>
-                <?php if ($book['genre']): ?>
-                    <small style="color: #666;"><?= e($book['genre']) ?></small>
-                <?php endif; ?>
-            </header>
-            
-            <?php if ($book['description']): ?>
-                <p><?= e(mb_strimwidth($book['description'], 0, 150, '...')) ?></p>
+            <?php if ($book['cover_image']): ?>
+                <div style="text-align: center; margin-bottom: 1rem; float: left; margin-right: 2em;">
+                    <img src="<?= COVERS_URL . e($book['cover_image']) ?>" 
+                        alt="<?= e($book['title']) ?>" 
+                        style="max-width: 120px; height: auto; border-radius: 4px; border: 1px solid #ddd;">
+                </div>
             <?php endif; ?>
-            
-                <footer style="display: flex; justify-content: space-between; align-items: center;">
-                    <div>
-                        <small>
-                            Глав: <?= $book['chapter_count'] ?> | 
-                            Слов: <?= $book['total_words'] ?>
-                        </small>
-                    </div>
-                    <div style="display: flex; gap: 3px;">
+            <header>
+                <h3><?= e($book['title']) ?>
+                    <div style="display: flex; gap: 3px; float:right;">
                         <a href="export_book.php?book_id=<?= $book['id'] ?>&format=pdf" class="compact-button secondary" title="Экспорт в PDF" target="_blank">
                             📄
                         </a>
@@ -87,6 +78,24 @@ include 'views/header.php';
                             </button>
                         </form>
                     </div>
+                </h3>
+                <?php if ($book['genre']): ?>
+                    <small style="color: #666; margin-top: 0.1em;"><?= e($book['genre']) ?></small>
+                <?php endif; ?>
+            </header>
+            
+            <?php if ($book['description']): ?>
+                <p><?= e(mb_strimwidth($book['description'], 0, 150, '...')) ?></p>
+            <?php endif; ?>
+            
+                <footer style="margin-top:1em; padding-top:2em;">
+                    <div>
+                        <small>
+                            Глав: <?= $book['chapter_count'] ?> | 
+                            Слов: <?= $book['total_words'] ?>
+                        </small>
+                    </div>
+                    
                 </footer>
         </article>
         <?php endforeach; ?>

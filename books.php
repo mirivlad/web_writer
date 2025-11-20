@@ -58,19 +58,19 @@ include 'views/header.php';
             <header>
                 <h3><?= e($book['title']) ?>
                     <div style="display: flex; gap: 3px; float:right;">
-                        <a href="export_book.php?book_id=<?= $book['id'] ?>&format=pdf" class="compact-button secondary" title="Экспорт в PDF" target="_blank">
-                            📄
+                        <a href="book_edit.php?id=<?= $book['id'] ?>" class="compact-button secondary" title="Редактировать книгу">
+                            ✏️
                         </a>
                         <a href="view_book.php?share_token=<?= $book['share_token'] ?>" class="compact-button secondary" title="Просмотреть книгу" target="_blank">
                             👁️
                         </a>
-                        <a href="book_edit.php?id=<?= $book['id'] ?>" class="compact-button secondary" title="Редактировать книгу">
-                            ✏️
-                        </a>
                         <a href="chapters.php?book_id=<?= $book['id'] ?>" class="compact-button secondary" title="Просмотр глав">
                             📑
                         </a>
-                        <form method="post" action="book_delete.php" style="display: inline;" onsubmit="return confirm('Вы уверены, что хотите удалить книгу «<?= e($book['title']) ?>»? Все главы также будут удалены.');">
+						<a href="export_book.php?book_id=<?= $book['id'] ?>&format=pdf" class="compact-button secondary" title="Экспорт в PDF" target="_blank">
+                            📄
+                        </a>
+                        <form method="post" action="book_delete.php" style="display: inline; margin-top: -0.1em;" onsubmit="return confirm('Вы уверены, что хотите удалить книгу «<?= e($book['title']) ?>»? Все главы также будут удалены.');">
                             <input type="hidden" name="book_id" value="<?= $book['id'] ?>">
                             <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
                             <button type="submit" class="compact-button secondary" style="background: #ff4444; border-color: #ff4444; color: white;" title="Удалить книгу">

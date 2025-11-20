@@ -38,6 +38,12 @@ if (!$book) {
 $chapters = $bookModel->getPublishedChapters($book['id']);
 $total_words = array_sum(array_column($chapters, 'word_count'));
 
+// Получаем информацию об авторе
+$stmt = $pdo->prepare("SELECT display_name, username FROM users WHERE id = ?");
+$stmt->execute([$book['user_id']]);
+$author_info = $stmt->fetch(PDO::FETCH_ASSOC);
+$author_name = $author_info['display_name'] ?? $author_info['username'] ?? 'Неизвестный автор';
+
 $page_title = $book['title'];
 include 'views/header.php';
 ?>
@@ -48,11 +54,14 @@ include 'views/header.php';
             <?php if ($book['cover_image']): ?>
                 <div style="margin-bottom: 1rem;">
                     <img src="<?= COVERS_URL . e($book['cover_image']) ?>" 
-                        alt="<?= e($book['title']) ?>" 
-                        style="max-width: 200px; height: auto; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+                         alt="<?= e($book['title']) ?>" 
+                         style="max-width: 200px; height: auto; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);"
+                         onerror="this.style.display='none'">
                 </div>
             <?php endif; ?>
+            
             <h1 style="margin-bottom: 0.5rem;"><?= e($book['title']) ?></h1>
+            <p style="color: #666; font-style: italic; margin-bottom: 0.5rem;"><?= e($author_name) ?></p>
             
             <?php if ($book['genre']): ?>
                 <p style="color: #666; font-style: italic; margin-bottom: 0.5rem;">
@@ -75,6 +84,28 @@ include 'views/header.php';
                 <?php endif; ?>
             </div>
         </header>
+
+        <!-- Интерактивное оглавление -->
+        <?php if (!empty($chapters)): ?>
+        <div style="margin: 2rem 0; padding: 1.5rem; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #007bff;">
+            <h3 style="margin-top: 0; color: #007bff;">📖 Оглавление</h3>
+			<a name="start"></a>
+            <div style="columns: 1;">
+                <?php foreach ($chapters as $index => $chapter): ?>
+                <div style="break-inside: avoid; margin-bottom: 0.5rem;">
+                    <a href="#chapter-<?= $chapter['id'] ?>" 
+                       style="text-decoration: none; color: #333; display: block; padding: 0.3rem 0;"
+                       onmouseover="this.style.color='#007bff'" 
+                       onmouseout="this.style.color='#333'">
+                        <span style="color: #666; font-size: 0.9em;"><?= $index + 1 ?>.</span>
+                        <?= e($chapter['title']) ?>
+                    </a>
+                </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+        <?php endif; ?>
+
         <div style="margin: 1rem 0; padding: 1rem; background: #f8f9fa; border-radius: 5px;">
             <h3 style="margin: 0 0 0.5rem 0;">Экспорт книги</h3>
             
@@ -84,9 +115,6 @@ include 'views/header.php';
                 </a>
                 <a href="export_book.php?share_token=<?= $book['share_token'] ?>&format=docx" class="adaptive-button secondary" target="_blank">
                     📝 DOCX
-                </a>
-                <a href="export_book.php?share_token=<?= $book['share_token'] ?>&format=odt" class="adaptive-button secondary" target="_blank">
-                    📄 ODT
                 </a>
                 <a href="export_book.php?share_token=<?= $book['share_token'] ?>&format=html" class="adaptive-button secondary" target="_blank">
                     🌐 HTML
@@ -100,6 +128,7 @@ include 'views/header.php';
                 <strong>Примечание:</strong> Экспортируются только опубликованные главы
             </p>
         </div>
+
         <?php if (empty($chapters)): ?>
             <div style="text-align: center; padding: 3rem; background: #f9f9f9; border-radius: 5px;">
                 <h3>В этой книге пока нет опубликованных глав</h3>
@@ -108,15 +137,17 @@ include 'views/header.php';
         <?php else: ?>
             <div class="book-content">
                 <?php foreach ($chapters as $index => $chapter): ?>
-                <section class="chapter" id="chapter-<?= $chapter['id'] ?>" style="margin-bottom: 3rem;">
+                <section class="chapter" id="chapter-<?= $chapter['id'] ?>" style="margin-bottom: 3rem; scroll-margin-top: 2rem;">
                     <h2 style="border-bottom: 1px solid #eee; padding-bottom: 0.5rem;">
                         <?= e($chapter['title']) ?>
+                        <a href="#start" style="text-decoration: none; color: #666; font-size: 0.8em; margin-left: 1rem;">🔗</a>
                     </h2>
                     <div class="chapter-content" style="line-height: 1.6; font-size: 1.1em;">
                         <?= $Parsedown->text($chapter['content']) ?>
                     </div>
                     <div style="margin-top: 1rem; padding-top: 0.5rem; border-top: 1px dashed #eee; color: #666; font-size: 0.9em;">
                         <small>Обновлено: <?= date('d.m.Y', strtotime($chapter['updated_at'])) ?></small>
+                        <a href="#top" style="float: right; color: #007bff; text-decoration: none;">↑ Наверх</a>
                     </div>
                 </section>
                 <?php endforeach; ?>
@@ -126,6 +157,7 @@ include 'views/header.php';
         <footer style="margin-top: 3rem; padding-top: 1rem; border-top: 2px solid #eee; text-align: center;">
             <p style="color: #666;">
                 Книга создана в <?= e(APP_NAME) ?> • 
+                Автор: <?= e($author_name) ?> • 
                 <?= date('d.m.Y', strtotime($book['created_at'])) ?>
             </p>
         </footer>
@@ -187,6 +219,35 @@ include 'views/header.php';
 
 .book-content th {
     background: #f5f5f5;
+}
+
+/* Адаптивность для оглавления */
+@media (max-width: 768px) {
+    .book-content {
+        font-size: 16px;
+        line-height: 1.6;
+    }
+    
+    .book-content h1 {
+        font-size: 1.6em;
+    }
+    
+    .book-content h2 {
+        font-size: 1.4em;
+    }
+    
+    .book-content h3 {
+        font-size: 1.2em;
+    }
+    
+    .book-content pre {
+        font-size: 14px;
+    }
+    
+    /* Оглавление в одну колонку на мобильных */
+    div[style*="columns: 2"] {
+        columns: 1 !important;
+    }
 }
 </style>
 

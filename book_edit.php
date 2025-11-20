@@ -239,9 +239,6 @@ function copyShareLink() {
         <a href="export_book.php?book_id=<?= $book_id ?>&format=docx" class="adaptive-button secondary" target="_blank">
             📝 DOCX
         </a>
-        <a href="export_book.php?book_id=<?= $book_id ?>&format=odt" class="adaptive-button secondary" target="_blank">
-            📄 ODT
-        </a>
         <a href="export_book.php?book_id=<?= $book_id ?>&format=html" class="adaptive-button secondary" target="_blank">
             🌐 HTML
         </a>

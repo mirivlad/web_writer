@@ -638,3 +638,23 @@ input:not([type="checkbox"], [type="radio"]), select {
     font-size: 2rem;
     margin: 0 auto 1rem;
 }
+
+/* Стили для страницы автора */
+.author-books .book-cover {
+    transition: transform 0.3s ease;
+}
+
+.author-books .book-cover:hover {
+    transform: scale(1.05);
+}
+
+/* Адаптивность для страницы автора */
+@media (max-width: 768px) {
+    .author-books article {
+        flex-direction: column;
+    }
+    
+    .author-books .book-cover {
+        align-self: center;
+    }
+}

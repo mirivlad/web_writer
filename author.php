@@ -1,7 +1,6 @@
 <?php
 require_once 'config/config.php';
 require_once 'models/Book.php';
-//require_once 'views/header.php';
 
 $author_id = (int)($_GET['id'] ?? 0);
 if (!$author_id) {
@@ -23,7 +22,7 @@ if (!$author) {
 }
 
 $bookModel = new Book($pdo);
-$books = $bookModel->findByUser($author_id, true); // только опубликованные (нужен параметр в модели)
+$books = $bookModel->findByUser($author_id, true); // только опубликованные
 
 $page_title = ($author['display_name'] ?: $author['username']) . ' — публичная страница';
 include 'views/header.php';
@@ -36,15 +35,30 @@ include 'views/header.php';
 <?php else: ?>
   <div class="grid">
     <?php foreach ($books as $b): ?>
-      <article>
+      <article style="display: flex; gap: 1rem; align-items: flex-start;">
         <?php if ($b['cover_image']): ?>
-          <img src="<?= e($b['cover_image']) ?>" alt="<?= e($b['title']) ?>" style="max-width:100%; height:auto;">
+          <div style="flex-shrink: 0;">
+            <img src="<?= COVERS_URL . e($b['cover_image']) ?>" 
+                 alt="<?= e($b['title']) ?>" 
+                 style="max-width: 120px; height: auto; border-radius: 4px; border: 1px solid #ddd;"
+                 onerror="this.style.display='none'">
+          </div>
+        <?php else: ?>
+          <div style="flex-shrink: 0;">
+            <div class="cover-placeholder" style="width: 120px; height: 160px;">📚</div>
+          </div>
         <?php endif; ?>
-        <h3><?= e($b['title']) ?></h3>
-        <?php if ($b['description']): ?>
-          <p><?= nl2br(e($b['description'])) ?></p>
-        <?php endif; ?>
-        <a href="view_book.php?share_token=<?= e($b['share_token']) ?>">Читать</a>
+        
+        <div style="flex: 1;">
+          <h3 style="margin-top: 0;"><?= e($b['title']) ?></h3>
+          <?php if ($b['genre']): ?>
+            <p style="color: #666; margin: 0.5rem 0;"><em><?= e($b['genre']) ?></em></p>
+          <?php endif; ?>
+          <?php if ($b['description']): ?>
+            <p style="margin-bottom: 1rem;"><?= nl2br(e($b['description'])) ?></p>
+          <?php endif; ?>
+          <a href="view_book.php?share_token=<?= e($b['share_token']) ?>" class="adaptive-button">Читать</a>
+        </div>
       </article>
     <?php endforeach; ?>
   </div>

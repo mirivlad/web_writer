@@ -7,39 +7,14 @@ namespace Composer\Autoload;
 class ComposerStaticInitfc3c92cecb1ffdb92cb5808b88609e81
 {
     public static $prefixLengthsPsr4 = array (
-        'S' =>
-        array (
-            'Svg\\' => 4,
-            'Sabberworm\\CSS\\' => 15,
-        ),
         'P' =>
         array (
             'PhpOffice\\PhpWord\\' => 18,
             'PhpOffice\\Math\\' => 15,
         ),
-        'M' =>
-        array (
-            'Masterminds\\' => 12,
-        ),
-        'F' =>
-        array (
-            'FontLib\\' => 8,
-        ),
-        'D' =>
-        array (
-            'Dompdf\\' => 7,
-        ),
     );
 
     public static $prefixDirsPsr4 = array (
-        'Svg\\' =>
-        array (
-            0 => __DIR__ . '/..' . '/phenx/php-svg-lib/src/Svg',
-        ),
-        'Sabberworm\\CSS\\' =>
-        array (
-            0 => __DIR__ . '/..' . '/sabberworm/php-css-parser/src',
-        ),
         'PhpOffice\\PhpWord\\' =>
         array (
             0 => __DIR__ . '/..' . '/phpoffice/phpword/src/PhpWord',
@@ -48,26 +23,23 @@ class ComposerStaticInitfc3c92cecb1ffdb92cb5808b88609e81
         array (
             0 => __DIR__ . '/..' . '/phpoffice/math/src/Math',
         ),
-        'Masterminds\\' =>
-        array (
-            0 => __DIR__ . '/..' . '/masterminds/html5/src',
-        ),
-        'FontLib\\' =>
-        array (
-            0 => __DIR__ . '/..' . '/phenx/php-font-lib/src/FontLib',
-        ),
-        'Dompdf\\' =>
-        array (
-            0 => __DIR__ . '/..' . '/dompdf/dompdf/src',
-        ),
     );
 
     public static $classMap = array (
         'Composer\\InstalledVersions' => __DIR__ . '/..' . '/composer/InstalledVersions.php',
         'Datamatrix' => __DIR__ . '/..' . '/tecnickcom/tcpdf/include/barcodes/datamatrix.php',
-        'Dompdf\\Cpdf' => __DIR__ . '/..' . '/dompdf/dompdf/lib/Cpdf.php',
+        'Odf' => __DIR__ . '/..' . '/cybermonde/odtphp/library/Odf.php',
+        'OdfException' => __DIR__ . '/..' . '/cybermonde/odtphp/library/Odf.php',
         'PDF417' => __DIR__ . '/..' . '/tecnickcom/tcpdf/include/barcodes/pdf417.php',
+        'PclZip' => __DIR__ . '/..' . '/cybermonde/odtphp/library/zip/pclzip/pclzip.lib.php',
+        'PclZipProxy' => __DIR__ . '/..' . '/cybermonde/odtphp/library/zip/PclZipProxy.php',
+        'PclZipProxyException' => __DIR__ . '/..' . '/cybermonde/odtphp/library/zip/PclZipProxy.php',
+        'PhpZipProxy' => __DIR__ . '/..' . '/cybermonde/odtphp/library/zip/PhpZipProxy.php',
+        'PhpZipProxyException' => __DIR__ . '/..' . '/cybermonde/odtphp/library/zip/PhpZipProxy.php',
         'QRcode' => __DIR__ . '/..' . '/tecnickcom/tcpdf/include/barcodes/qrcode.php',
+        'Segment' => __DIR__ . '/..' . '/cybermonde/odtphp/library/Segment.php',
+        'SegmentException' => __DIR__ . '/..' . '/cybermonde/odtphp/library/Segment.php',
+        'SegmentIterator' => __DIR__ . '/..' . '/cybermonde/odtphp/library/SegmentIterator.php',
         'TCPDF' => __DIR__ . '/..' . '/tecnickcom/tcpdf/tcpdf.php',
         'TCPDF2DBarcode' => __DIR__ . '/..' . '/tecnickcom/tcpdf/tcpdf_barcodes_2d.php',
         'TCPDFBarcode' => __DIR__ . '/..' . '/tecnickcom/tcpdf/tcpdf_barcodes_1d.php',
@@ -77,6 +49,7 @@ class ComposerStaticInitfc3c92cecb1ffdb92cb5808b88609e81
         'TCPDF_FONT_DATA' => __DIR__ . '/..' . '/tecnickcom/tcpdf/include/tcpdf_font_data.php',
         'TCPDF_IMAGES' => __DIR__ . '/..' . '/tecnickcom/tcpdf/include/tcpdf_images.php',
         'TCPDF_STATIC' => __DIR__ . '/..' . '/tecnickcom/tcpdf/include/tcpdf_static.php',
+        'ZipInterface' => __DIR__ . '/..' . '/cybermonde/odtphp/library/zip/ZipInterface.php',
     );
 
     public static function getInitializer(ClassLoader $loader)

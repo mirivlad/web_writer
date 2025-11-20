@@ -100,7 +100,7 @@ include '../views/header.php';
                     <tr>
                         <td><?= $user['id'] ?></td>
                         <td>
-                            <strong><?= e($user['username']) ?></strong>
+                            <strong><a href="/author.php?id=<?= $user['id'] ?>"><?= e($user['username']) ?></a></strong>
                             <?php if ($user['id'] == $_SESSION['user_id']): ?>
                                 <br><small style="color: #666;">(Вы)</small>
                             <?php endif; ?>

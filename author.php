@@ -1,7 +1,7 @@
 <?php
 require_once 'config/config.php';
 require_once 'models/Book.php';
-require_once 'views/header.php';
+//require_once 'views/header.php';
 
 $author_id = (int)($_GET['id'] ?? 0);
 if (!$author_id) {

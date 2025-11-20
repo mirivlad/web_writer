@@ -39,6 +39,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'genre' => $genre,
             'user_id' => $user_id
         ];
+        $data['published'] = isset($_POST['published']) ? 1 : 0;
         
         if ($is_edit) {
             $success = $bookModel->update($book_id, $data);
@@ -102,7 +103,16 @@ include 'views/header.php';
         <textarea id="description" name="description" 
                   placeholder="Краткое описание сюжета или аннотация..." 
                   rows="6"
-                  style="width: 100%;"><?= e($book['description'] ?? $_POST['description'] ?? '') ?></textarea>
+                  style="width: 100%;">
+                  <?= e($book['description'] ?? $_POST['description'] ?? '') ?>
+        </textarea>
+        <div>
+            <label for="published">
+                <input type="checkbox" id="published" name="published" value="1"
+                <?= !empty($book['published']) || (!empty($_POST['published']) && $_POST['published']) ? 'checked' : '' ?>>
+                Опубликовать книгу (показывать на публичной странице автора)
+            </label>
+        </div>
     </div>
     
     <div style="display: flex; gap: 5px; flex-wrap: wrap; align-items: center;">

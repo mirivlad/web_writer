@@ -78,6 +78,7 @@ include 'views/header.php';
 
 <article>
     <h3>Информация об аккаунте</h3>
+    <p><a href="author.php?id=<?= $_SESSION['user_id'] ?>" target="_blank">Моя публичная страница</a></p>
     <p><strong>Дата регистрации:</strong> <?= date('d.m.Y H:i', strtotime($user['created_at'])) ?></p>
     <?php if ($user['last_login']): ?>
         <p><strong>Последний вход:</strong> <?= date('d.m.Y H:i', strtotime($user['last_login'])) ?></p>

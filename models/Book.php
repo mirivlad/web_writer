@@ -20,27 +20,31 @@ class Book {
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
     
-    public function findByUser($user_id) {
-        $stmt = $this->pdo->prepare("
-            SELECT b.*, 
-                   COUNT(c.id) as chapter_count,
-                   COALESCE(SUM(c.word_count), 0) as total_words
-            FROM books b 
-            LEFT JOIN chapters c ON b.id = c.book_id 
-            WHERE b.user_id = ? 
-            GROUP BY b.id 
-            ORDER BY b.created_at DESC
-        ");
+    public function findByUser($user_id, $only_published = false) {
+        $sql = "
+        SELECT b.*,
+                COUNT(c.id) as chapter_count,
+                COALESCE(SUM(c.word_count), 0) as total_words
+        FROM books b
+        LEFT JOIN chapters c ON b.id = c.book_id
+        WHERE b.user_id = ?
+        ";
+        if ($only_published) {
+            $sql .= " AND b.published = 1 ";
+        }
+        $sql .= " GROUP BY b.id ORDER BY b.created_at DESC ";
+        $stmt = $this->pdo->prepare($sql);
         $stmt->execute([$user_id]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
     
     public function create($data) {
         $share_token = bin2hex(random_bytes(16));
-        
+        $published = isset($data['published']) ? (int)$data['published'] : 0;
+
         $stmt = $this->pdo->prepare("
-            INSERT INTO books (title, description, genre, user_id, series_id, sort_order_in_series, share_token) 
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO books (title, description, genre, user_id, series_id, sort_order_in_series, share_token, published)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         ");
         return $stmt->execute([
             $data['title'],
@@ -49,14 +53,17 @@ class Book {
             $data['user_id'],
             $data['series_id'] ?? null,
             $data['sort_order_in_series'] ?? null,
-            $share_token
+            $share_token,
+            $published
         ]);
     }
     
     public function update($id, $data) {
+        $published = isset($data['published']) ? (int)$data['published'] : 0;
+
         $stmt = $this->pdo->prepare("
-            UPDATE books 
-            SET title = ?, description = ?, genre = ?, series_id = ?, sort_order_in_series = ?
+            UPDATE books
+            SET title = ?, description = ?, genre = ?, series_id = ?, sort_order_in_series = ?, published = ?
             WHERE id = ? AND user_id = ?
         ");
         return $stmt->execute([
@@ -65,6 +72,7 @@ class Book {
             $data['genre'] ?? null,
             $data['series_id'] ?? null,
             $data['sort_order_in_series'] ?? null,
+            $published,
             $id,
             $data['user_id']
         ]);

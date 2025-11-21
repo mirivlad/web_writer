@@ -40,11 +40,20 @@ CREATE TABLE `books` (
   UNIQUE KEY `share_token` (`share_token`),
   KEY `user_id` (`user_id`),
   KEY `series_id` (`series_id`),
+  KEY `idx_sort_order_in_series` (`sort_order_in_series`),
   CONSTRAINT `books_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
   CONSTRAINT `books_ibfk_2` FOREIGN KEY (`series_id`) REFERENCES `series` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
+--
+-- Dumping data for table `books`
+--
+
+LOCK TABLES `books` WRITE;
+/*!40000 ALTER TABLE `books` DISABLE KEYS */;
+/*!40000 ALTER TABLE `books` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `chapters`
@@ -69,6 +78,14 @@ CREATE TABLE `chapters` (
 ) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
+--
+-- Dumping data for table `chapters`
+--
+
+LOCK TABLES `chapters` WRITE;
+/*!40000 ALTER TABLE `chapters` DISABLE KEYS */;
+/*!40000 ALTER TABLE `chapters` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `series`
@@ -83,6 +100,7 @@ CREATE TABLE `series` (
   `description` text DEFAULT NULL,
   `user_id` int(11) NOT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   PRIMARY KEY (`id`),
   KEY `user_id` (`user_id`),
   CONSTRAINT `series_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
@@ -153,7 +171,7 @@ CREATE TABLE `users` (
 
 LOCK TABLES `users` WRITE;
 /*!40000 ALTER TABLE `users` DISABLE KEYS */;
-INSERT INTO `users` VALUES (1,'mirivlad','M.I.R.V.','$2y$10$fDzdULKndRGKiNESXpny8eqUUsoxGbOTeWhX8TvUjrlrT7F/pbzJm','mirvtop@yandex.ru','2025-11-19 03:54:48','2025-11-20 06:34:27',1),(7,'Kate','Kate','$2y$10$gly0AhS9uUk5W1YsM45aPOAd0Dq1tL44jjsse7Z8nbDZBbtTu5opC','cea@profl.ru','2025-11-20 06:57:01','2025-11-20 08:43:31',1);
+INSERT INTO `users` VALUES (1,'mirivlad','M.I.R.V.','$2y$10$fDzdULKndRGKiNESXpny8eqUUsoxGbOTeWhX8TvUjrlrT7F/pbzJm','mirvtop@yandex.ru','2025-11-19 03:54:48','2025-11-21 01:26:29',1),(7,'Kate','Kate','$2y$10$gly0AhS9uUk5W1YsM45aPOAd0Dq1tL44jjsse7Z8nbDZBbtTu5opC','cea@profl.ru','2025-11-20 06:57:01','2025-11-20 08:43:31',1);
 /*!40000 ALTER TABLE `users` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
@@ -166,4 +184,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-11-20 12:13:42
+-- Dump completed on 2025-11-21  4:34:01

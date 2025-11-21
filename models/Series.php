@@ -85,11 +85,9 @@ class Series {
         try {
             $this->pdo->beginTransaction();
             
-            // Убираем серию у всех книг
             $stmt = $this->pdo->prepare("UPDATE books SET series_id = NULL, sort_order_in_series = NULL WHERE series_id = ? AND user_id = ?");
             $stmt->execute([$id, $user_id]);
             
-            // Удаляем саму серию
             $stmt = $this->pdo->prepare("DELETE FROM series WHERE id = ? AND user_id = ?");
             $result = $stmt->execute([$id, $user_id]);
             
@@ -126,7 +124,6 @@ class Series {
         return ($result['max_order'] ?? 0) + 1;
     }
     
-    // Новый метод для получения статистики по серии
     public function getSeriesStats($series_id, $user_id = null) {
         $sql = "
             SELECT 

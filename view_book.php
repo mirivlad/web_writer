@@ -61,7 +61,6 @@ include 'views/header.php';
             <?php endif; ?>
             
             <h1 style="margin-bottom: 0.5rem;"><?= e($book['title']) ?></h1>
-            <!-- В view_book.php, после информации об авторе -->
             <?php if ($book['series_id']): ?>
                 <?php
                 $series_stmt = $pdo->prepare("SELECT id, title FROM series WHERE id = ?");
@@ -240,7 +239,6 @@ include 'views/header.php';
     background: #f5f5f5;
 }
 
-/* Адаптивность для оглавления */
 @media (max-width: 768px) {
     .book-content {
         font-size: 16px;
@@ -262,8 +260,7 @@ include 'views/header.php';
     .book-content pre {
         font-size: 14px;
     }
-    
-    /* Оглавление в одну колонку на мобильных */
+
     div[style*="columns: 2"] {
         columns: 1 !important;
     }

@@ -12,7 +12,7 @@ foreach ($series as &$ser) {
     $ser['book_count'] = $stats['book_count'] ?? 0;
     $ser['total_words'] = $stats['total_words'] ?? 0;
 }
-unset($ser); // разрываем ссылку
+unset($ser); 
 
 $page_title = "Мои серии книг";
 include 'views/header.php';

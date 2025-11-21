@@ -5,7 +5,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const statusSelect = document.getElementById('status');
     
     // Проверяем, что это редактирование существующей главы
-    // Если в URL есть параметр 'id', значит это редактирование
     const urlParams = new URLSearchParams(window.location.search);
     const isEditMode = urlParams.has('id');
     
@@ -95,5 +94,5 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    console.log('Автосохранение включено для редактирования главы');
+    //console.log('Автосохранение включено для редактирования главы');
 });

@@ -53,7 +53,7 @@ function transliterate($text) {
     return str_replace($cyr, $lat, $text);
 }
 
-// Функция для очистки имени файла с транслитерацией
+// Функция для очистки имени файла
 function cleanFilename($filename) {
     // Сначала транслитерируем
     $filename = transliterate($filename);
@@ -130,7 +130,6 @@ function handleCoverUpload($file, $book_id) {
 }
 
 function optimizeImage($file_path) {
-    // Простая оптимизация - ресайз до максимальных размеров
     list($width, $height, $type) = getimagesize($file_path);
     
     $max_width = 800;
@@ -189,8 +188,6 @@ function optimizeImage($file_path) {
         imagedestroy($new_image);
     }
 }
-
-// В includes/functions.php, после функции handleCoverUpload
 
 function handleAvatarUpload($file, $user_id) {
     global $pdo;

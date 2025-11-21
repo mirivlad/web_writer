@@ -149,7 +149,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const controlsContainer = document.createElement('div');
         controlsContainer.className = 'editor-controls';
         
-        const fullscreenBtn = createButton('⛶', 'Полноэкранный режим', toggleFullscreen);
+        const fullscreenBtn = createButton('🔲', 'Полноэкранный режим', toggleFullscreen);
         const helpBtn = createButton('❓', 'Справка по Markdown', showHelp);
         
         controlsContainer.appendChild(fullscreenBtn);

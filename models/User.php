@@ -35,7 +35,6 @@ class User {
     public function create($data) {
         $password_hash = password_hash($data['password'], PASSWORD_DEFAULT);
         
-        // Определяем статус активности: по умолчанию неактивен, если не указано иное
         $is_active = $data['is_active'] ?? 0;
         
         $stmt = $this->pdo->prepare("

@@ -82,7 +82,7 @@ class Book {
         try {
             $this->pdo->beginTransaction();
             
-            // Удаляем главы книги (сработает CASCADE, но лучше явно)
+            // Удаляем главы книги 
             $stmt = $this->pdo->prepare("DELETE FROM chapters WHERE book_id = ?");
             $stmt->execute([$id]);
             
@@ -127,7 +127,7 @@ class Book {
     }
 
     public function deleteCover($book_id) {
-        // Сначала получаем текущее имя файла
+
         $book = $this->findById($book_id);
         $old_filename = $book['cover_image'];
         

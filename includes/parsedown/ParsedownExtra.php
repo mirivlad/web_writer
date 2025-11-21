@@ -3,13 +3,12 @@ require_once 'Parsedown.php';
 
 class ParsedownExtra extends Parsedown {
     protected function blockQuote($Line) {
-        // Обработка диалогов
-        if (preg_match('/^—\s+/', $Line['text'])) {
+        if (preg_match('/^пїЅ\s+/', $Line['text'])) {
             return array(
                 'element' => array(
                     'name' => 'div',
                     'attributes' => array('class' => 'dialogue'),
-                    'text' => ltrim($Line['text'], '— ')
+                    'text' => ltrim($Line['text'], 'пїЅ ')
                 )
             );
         }

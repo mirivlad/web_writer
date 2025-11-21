@@ -30,13 +30,11 @@ class Chapter {
     }
     
     public function create($data) {
-        // Сначала получаем максимальный sort_order для этой книги
         $stmt = $this->pdo->prepare("SELECT MAX(sort_order) as max_order FROM chapters WHERE book_id = ?");
         $stmt->execute([$data['book_id']]);
         $result = $stmt->fetch();
         $next_order = ($result['max_order'] ?? 0) + 1;
         
-        // Подсчитываем количество слов
         $word_count = $this->countWords($data['content']);
         
         $stmt = $this->pdo->prepare("
@@ -81,7 +79,6 @@ class Chapter {
     }
     
     private function countWords($text) {
-        // Простой подсчет слов (можно улучшить)
         $text = strip_tags($text);
         $text = preg_replace('/[^\p{L}\p{N}\s]/u', ' ', $text);
         $words = preg_split('/\s+/', $text);

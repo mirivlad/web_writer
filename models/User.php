@@ -86,5 +86,35 @@ class User {
     public function verifyPassword($password, $hash) {
         return password_verify($password, $hash);
     }
+
+    public function updateAvatar($id, $filename) {
+        $stmt = $this->pdo->prepare("UPDATE users SET avatar = ? WHERE id = ?");
+        return $stmt->execute([$filename, $id]);
+    }
+
+    public function updateBio($id, $bio) {
+        $stmt = $this->pdo->prepare("UPDATE users SET bio = ? WHERE id = ?");
+        return $stmt->execute([$bio, $id]);
+    }
+
+    public function updateProfile($id, $data) {
+        $sql = "UPDATE users SET display_name = ?, email = ?, bio = ?";
+        $params = [
+            $data['display_name'] ?? '',
+            $data['email'] ?? null,
+            $data['bio'] ?? null
+        ];
+        
+        if (!empty($data['avatar'])) {
+            $sql .= ", avatar = ?";
+            $params[] = $data['avatar'];
+        }
+        
+        $sql .= " WHERE id = ?";
+        $params[] = $id;
+        
+        $stmt = $this->pdo->prepare($sql);
+        return $stmt->execute($params);
+    }
 }
 ?>

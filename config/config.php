@@ -1,5 +1,5 @@
 <?php
-// config/config.php
+// config/config.php - автоматически сгенерирован установщиком
 // Подключаем функции
 require_once __DIR__ . '/../includes/functions.php';
 session_start();
@@ -7,20 +7,25 @@ session_start();
 // Настройки базы данных
 define('DB_HOST', 'localhost');
 define('DB_USER', 'writer_mirv');
-define('DB_PASS', 'writer_moloko22'); 
+define('DB_PASS', 'writer_moloko22');
 define('DB_NAME', 'writer_app');
 define('SITE_URL', 'https://writer.mirv.top');
-//define('BASE_URL', 'http://' . $_SERVER['HTTP_HOST'] . '/'); // Измените на ваш домен
+
 // Настройки приложения
 define('APP_NAME', 'Web Writer');
 define('UPLOAD_PATH', __DIR__ . '/../uploads/');
 define('COVERS_PATH', UPLOAD_PATH . 'covers/');
 define('COVERS_URL', SITE_URL . '/uploads/covers/');
+define('AVATARS_PATH', UPLOAD_PATH . 'avatars/');
+define('AVATARS_URL', SITE_URL . '/uploads/avatars/');
 
 // Создаем папку для загрузок, если ее нет
-// if (!file_exists(COVERS_PATH)) {
-//     mkdir(COVERS_PATH, 0765, true);
-// }
+if (!file_exists(COVERS_PATH)) {
+    mkdir(COVERS_PATH, 0755, true);
+}
+if (!file_exists(AVATARS_PATH)) {
+    mkdir(AVATARS_PATH, 0755, true);
+}
 
 // Подключение к базе данных
 try {
@@ -30,7 +35,6 @@ try {
     error_log("DB Error: " . $e->getMessage());
     die("Ошибка подключения к базе данных");
 }
-
 
 // Автозагрузка моделей
 spl_autoload_register(function ($class_name) {

@@ -141,5 +141,64 @@ class Book {
         $stmt = $this->pdo->prepare("UPDATE books SET cover_image = NULL WHERE id = ?");
         return $stmt->execute([$book_id]);
     }
+
+    public function updateSeriesInfo($book_id, $series_id, $sort_order) {
+        $stmt = $this->pdo->prepare("UPDATE books SET series_id = ?, sort_order_in_series = ? WHERE id = ?");
+        return $stmt->execute([$series_id, $sort_order, $book_id]);
+    }
+
+    public function removeFromSeries($book_id) {
+        $stmt = $this->pdo->prepare("UPDATE books SET series_id = NULL, sort_order_in_series = NULL WHERE id = ?");
+        return $stmt->execute([$book_id]);
+    }
+
+   public function findBySeries($series_id) {
+        $stmt = $this->pdo->prepare("
+            SELECT b.*
+            FROM books b
+            WHERE b.series_id = ?
+            ORDER BY b.sort_order_in_series, b.created_at
+        ");
+        $stmt->execute([$series_id]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function reorderSeriesBooks($series_id, $new_order) {
+        try {
+            $this->pdo->beginTransaction();
+            
+            foreach ($new_order as $order => $book_id) {
+                $stmt = $this->pdo->prepare("UPDATE books SET sort_order_in_series = ? WHERE id = ? AND series_id = ?");
+                $stmt->execute([$order + 1, $book_id, $series_id]);
+            }
+            
+            $this->pdo->commit();
+            return true;
+        } catch (Exception $e) {
+            $this->pdo->rollBack();
+            return false;
+        }
+    }
+
+
+    public function getBookStats($book_id, $only_published_chapters = false) {
+        $sql = "
+            SELECT 
+                COUNT(c.id) as chapter_count,
+                COALESCE(SUM(c.word_count), 0) as total_words
+            FROM books b
+            LEFT JOIN chapters c ON b.id = c.book_id
+            WHERE b.id = ?
+        ";
+        
+        if ($only_published_chapters) {
+            $sql .= " AND c.status = 'published'";
+        }
+        
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([$book_id]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+    
 }
 ?>

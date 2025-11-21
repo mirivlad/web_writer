@@ -1,4 +1,6 @@
-/* style.css */
+/* style.css - оптимизированная версия */
+
+/* Базовые стили */
 h1, h2, h3, h4, h5, h6 {
     margin-bottom: 1rem;
 }
@@ -22,6 +24,18 @@ input:not([type="checkbox"], [type="radio"]), select {
     height: 2em;
 }
 
+/* Убираем конфликтующие стили Pico CSS */
+article header, article footer {
+    margin: 0;
+    padding: 0;
+}
+
+article > header, article > footer {
+    margin: 0;
+    padding: 0;
+}
+
+/* Уведомления */
 .alert {
     padding: 1rem;
     margin: 1rem 0;
@@ -40,6 +54,7 @@ input:not([type="checkbox"], [type="radio"]), select {
     border: 1px solid #c8e6c9;
 }
 
+/* Кнопки */
 .compact-button {
     padding: 3px 8px !important;
     font-size: 0.85rem;
@@ -60,23 +75,6 @@ input:not([type="checkbox"], [type="radio"]), select {
 
 .compact-button:hover {
     opacity: 0.9;
-}
-
-.compact-table {
-    width: 100%;
-    font-size: 0.9rem;
-    border-collapse: collapse;
-}
-
-.compact-table th,
-.compact-table td {
-    padding: 6px 8px;
-    border-bottom: 1px solid #eee;
-}
-
-.compact-table th {
-    background: #f5f5f5;
-    font-weight: bold;
 }
 
 .button-group {
@@ -181,23 +179,66 @@ input:not([type="checkbox"], [type="radio"]), select {
     color: var(--primary-inverse);
 }
 
-@media (max-width: 768px) {
-    .adaptive-button {
-        flex: 1 1 calc(50% - 10px);
-        min-width: calc(50% - 10px);
-        font-size: 0.8rem;
-        padding: 10px 8px !important;
-    }
+.action-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.75rem 1.5rem;
+    font-size: 0.9rem;
+    text-decoration: none;
+    border: 1px solid;
+    border-radius: 4px;
+    cursor: pointer;
+    box-sizing: border-box;
+    height: 44px;
+    min-width: 140px;
+    white-space: nowrap;
+    transition: all 0.3s ease;
+    text-align: center;
 }
 
-@media (max-width: 480px) {
-    .adaptive-button {
-        flex: 1 1 100%;
-        min-width: 100%;
-    }
+.action-button.primary {
+    background: #007bff;
+    border-color: #007bff;
+    color: #fff;
 }
 
-/* Стили для Markdown редактора */
+.action-button.primary:hover {
+    opacity: 0.9;
+}
+
+.action-button.delete {
+    margin-top: 1rem;
+    background: #ff4444;
+    border-color: #ff4444;
+    color: white;
+}
+
+.action-button.delete:hover {
+    background: #dd3333;
+    border-color: #dd3333;
+    color: white;
+}
+
+/* Таблицы */
+.compact-table {
+    width: 100%;
+    font-size: 0.9rem;
+    border-collapse: collapse;
+}
+
+.compact-table th,
+.compact-table td {
+    padding: 6px 8px;
+    border-bottom: 1px solid #eee;
+}
+
+.compact-table th {
+    background: #f5f5f5;
+    font-weight: bold;
+}
+
+/* Markdown редактор */
 #content {
     transition: all 0.3s ease;
     border: 1px solid #ddd;
@@ -220,9 +261,31 @@ input:not([type="checkbox"], [type="radio"]), select {
     background-color: #fff;
 }
 
-/* Стили для полноэкранного режима */
+/* Кастомный скроллбар для редактора */
+#content::-webkit-scrollbar {
+    width: 8px;
+}
 
+#content::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
 
+#content::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+}
+
+#content::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+#content {
+    scrollbar-width: thin;
+    scrollbar-color: #c1c1c1 #f1f1f1;
+}
+
+/* Элементы управления редактором */
 .editor-controls {
     position: sticky !important;
     top: 10px !important;
@@ -256,11 +319,9 @@ input:not([type="checkbox"], [type="radio"]), select {
     box-shadow: 0 4px 8px rgba(0,0,0,0.3) !important;
 }
 
-/* Стили для полноэкранных кнопок */
+/* Полноэкранный режим редактора */
 #fullscreen-controls {
     position: fixed !important;
-    top: 15px !important;
-    right: 15px !important;
     z-index: 9999 !important;
     display: flex !important;
     gap: 5px !important;
@@ -288,135 +349,7 @@ input:not([type="checkbox"], [type="radio"]), select {
     box-shadow: 0 4px 8px rgba(0,0,0,0.4) !important;
 }
 
-/* Стили для полноэкранного режима - упрощенные для мобильных */
-#content.mobile-fullscreen {
-    position: fixed !important;
-    top: 50px !important;
-    left: 0 !important;
-    width: 100vw !important;
-    height: calc(100vh - 100px) !important; /* Оставляем место для клавиатуры */
-    z-index: 9998 !important;
-    background-color: white !important;
-    border: 2px solid #007bff !important;
-    border-radius: 0 !important;
-    font-size: 18px !important;
-    padding: 15px !important;
-    margin: 0 !important;
-    box-sizing: border-box !important;
-    resize: none !important;
-    box-shadow: none !important;
-    overflow-y: auto !important;
-    -webkit-overflow-scrolling: touch !important;
-}
-
-/* Стили для ПК в полноэкранном режиме */
-#content.desktop-fullscreen {
-    position: fixed !important;
-    top: 5vh !important;
-    left: 5vw !important;
-    width: 90vw !important;
-    height: 90vh !important;
-    z-index: 9998 !important;
-    background-color: white !important;
-    border: 2px solid #007bff !important;
-    border-radius: 8px !important;
-    font-size: 16px !important;
-    padding: 20px !important;
-    margin: 0 !important;
-    box-sizing: border-box !important;
-    resize: none !important;
-    box-shadow: 0 0 20px rgba(0,0,0,0.3) !important;
-}
-
-/* Улучшенные стили для кнопок в полноэкранном режиме */
-#fullscreen-controls {
-    position: fixed !important;
-    z-index: 9999 !important;
-    display: flex !important;
-    gap: 5px !important;
-}
-
-/* Для мобильных устройств */
-@media (max-width: 768px) {
-    #fullscreen-controls {
-        top: 10px !important;
-        right: 10px !important;
-    }
-    
-    #fullscreen-controls button {
-        width: 60px !important;
-        height: 60px !important;
-        font-size: 24px !important;
-        border: 2px solid #ddd !important;
-    }
-    
-    .editor-controls button {
-        width: 50px !important;
-        height: 50px !important;
-        font-size: 20px !important;
-    }
-    
-    /* Улучшенный полноэкранный режим для мобильных с учетом клавиатуры */
-    #content.mobile-fullscreen {
-        padding: 15px !important;
-        font-size: 16px !important;
-    }
-    
-    /* Дополнительные стили для очень маленьких экранов */
-    @media (max-width: 480px) {
-        #fullscreen-controls button {
-            width: 55px !important;
-            height: 55px !important;
-            font-size: 22px !important;
-        }
-        
-        #content.mobile-fullscreen {
-            padding: 10px !important;
-            font-size: 16px !important;
-        }
-    }
-}
-
-/* Для десктопов */
-@media (min-width: 769px) {
-    #fullscreen-controls {
-        top: 15px !important;
-        right: 15px !important;
-    }
-    
-    #fullscreen-controls button {
-        width: 50px !important;
-        height: 50px !important;
-        font-size: 20px !important;
-    }
-}
-
-/* Кастомный скроллбар */
-#content::-webkit-scrollbar {
-    width: 8px;
-}
-
-#content::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 4px;
-}
-
-#content::-webkit-scrollbar-thumb {
-    background: #c1c1c1;
-    border-radius: 4px;
-}
-
-#content::-webkit-scrollbar-thumb:hover {
-    background: #a8a8a8;
-}
-
-/* Для Firefox */
-#content {
-    scrollbar-width: thin;
-    scrollbar-color: #c1c1c1 #f1f1f1;
-}
-
-
+/* Стили для отображения контента книг */
 .book-content {
     line-height: 1.7;
     font-family: Georgia, serif;
@@ -515,109 +448,13 @@ input:not([type="checkbox"], [type="radio"]), select {
     background: #f9f9f9;
 }
 
-/* Стили для диалогов */
 .dialogue {
     margin-left: 2rem;
     font-style: italic;
     color: #2c5aa0;
 }
 
-/* Адаптивность для мобильных */
-@media (max-width: 768px) {
-    .book-content {
-        font-size: 16px;
-        line-height: 1.6;
-    }
-    
-    .book-content h1 {
-        font-size: 1.6em;
-    }
-    
-    .book-content h2 {
-        font-size: 1.4em;
-    }
-    
-    .book-content h3 {
-        font-size: 1.2em;
-    }
-    
-    .book-content pre {
-        font-size: 14px;
-    }
-}
-
-/* Стили для кнопок действий */
-.action-button {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0.75rem 1.5rem;
-    font-size: 0.9rem;
-    text-decoration: none;
-    border: 1px solid;
-    border-radius: 4px;
-    cursor: pointer;
-    box-sizing: border-box;
-    height: 44px;
-    min-width: 140px;
-    white-space: nowrap;
-    transition: all 0.3s ease;
-    text-align: center;
-}
-
-.action-button.primary {
-    background: #007bff;
-    border-color: #007bff;
-    color: #fff;
-}
-
-.action-button.primary:hover {
-    opacity: 0.9;
-}
-
-.action-button.delete {
-    margin-top: 1rem;
-    background: #ff4444;
-    border-color: #ff4444;
-    color: white;
-}
-
-.action-button.delete:hover {
-    background: #dd3333;
-    border-color: #dd3333;
-    color: white;
-}
-
-/* Адаптивность для мобильных */
-@media (max-width: 768px) {
-    .action-button {
-        padding: 0.6rem 1rem;
-        font-size: 0.85rem;
-        min-width: 120px;
-        height: 42px;
-    }
-}
-
-@media (max-width: 480px) {
-    .action-button {
-        padding: 0.5rem 0.8rem;
-        font-size: 0.8rem;
-        min-width: 110px;
-        height: 40px;
-    }
-    
-    /* На очень маленьких экранах делаем кнопки блочными */
-    .action-buttons-container {
-        flex-direction: column;
-        width: 100%;
-    }
-    
-    .action-buttons-container .action-button {
-        width: 100%;
-        min-width: auto;
-    }
-}
-/* assets/css/style.css - добавить */
+/* Обложки и медиа */
 .book-cover {
     transition: transform 0.3s ease;
 }
@@ -639,17 +476,276 @@ input:not([type="checkbox"], [type="radio"]), select {
     margin: 0 auto 1rem;
 }
 
-/* Стили для страницы автора */
-.author-books .book-cover {
-    transition: transform 0.3s ease;
+/* Аватарки и профиль */
+.avatar-container {
+    text-align: center;
+    margin-bottom: 1.5rem;
 }
 
-.author-books .book-cover:hover {
-    transform: scale(1.05);
+.avatar {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    border: 3px solid #007bff;
+    object-fit: cover;
 }
 
-/* Адаптивность для страницы автора */
+.avatar-placeholder {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 3rem;
+    margin: 0 auto;
+}
+
+.author-bio {
+    background: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: 8px;
+    margin: 1rem 0;
+    line-height: 1.6;
+}
+
+.author-bio h1, .author-bio h2, .author-bio h3 {
+    margin-top: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.author-bio p {
+    margin-bottom: 1rem;
+}
+
+.author-bio ul, .author-bio ol {
+    margin-bottom: 1rem;
+    padding-left: 2rem;
+}
+
+.author-bio blockquote {
+    border-left: 4px solid #007bff;
+    padding-left: 1rem;
+    margin-left: 0;
+    color: #555;
+    font-style: italic;
+}
+
+/* Статистика */
+.author-stats {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    flex-wrap: wrap;
+    margin: 1rem 0;
+}
+
+.stat-item {
+    text-align: center;
+}
+
+.stat-number {
+    font-size: 1.5em;
+    font-weight: bold;
+    color: #007bff;
+}
+
+.stat-label {
+    font-size: 0.9em;
+    color: #666;
+}
+
+/* Серии книг */
+.series-books article {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    border: 1px solid #e0e0e0;
+}
+
+.series-books article:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.series-info {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 2rem;
+}
+
+.series-badge {
+    display: inline-block;
+    background: #007bff;
+    color: white;
+    padding: 0.2rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    margin-left: 0.5rem;
+}
+
+/* Dashboard */
+.dashboard-buttons {
+    display: flex;
+    gap: 10px;
+    margin-top: 1rem;
+    flex-wrap: nowrap;
+}
+
+.dashboard-button {
+    flex: 1;
+    text-align: center;
+    padding: 0.75rem 0.5rem;
+    text-decoration: none;
+    border: 1px solid var(--secondary);
+    border-radius: 4px;
+    background: var(--secondary);
+    color: var(--secondary-inverse);
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+}
+
+.dashboard-button:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+}
+
+.dashboard-button.new {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: var(--primary-inverse);
+    flex: 0.7;
+}
+
+.stats-list {
+    margin-top: 1rem;
+}
+
+.stats-list p {
+    margin: 0.5rem 0;
+    padding: 0.3rem 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.stats-list p:last-child {
+    border-bottom: none;
+}
+
+.series-stats {
+    margin-top: 1rem;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 5px;
+    border-left: 4px solid #6f42c1;
+}
+
+.series-stats p {
+    margin: 0.5rem 0;
+    font-size: 0.9rem;
+}
+
+.dashboard-section {
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 1px solid #eee;
+}
+
+.dashboard-item {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    border: 1px solid #e0e0e0;
+    padding: 1rem;
+}
+
+.dashboard-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.welcome-message {
+    text-align: center;
+    padding: 3rem;
+    background: #f9f9f9;
+    border-radius: 8px;
+    margin-top: 2rem;
+}
+
+.welcome-buttons {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 1.5rem;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+    margin-top: 0.5rem;
+}
+
+.action-buttons .compact-button {
+    flex: 1;
+    min-width: 80px;
+    text-align: center;
+    font-size: 0.8rem;
+    padding: 0.3rem 0.5rem;
+}
+
+/* Улучшения для grid в dashboard */
+.grid {
+    gap: 1rem;
+}
+
+.grid article {
+    margin: 0;
+    padding: 1.5rem;
+}
+
+/* Адаптивность */
 @media (max-width: 768px) {
+    .adaptive-button {
+        flex: 1 1 calc(50% - 10px);
+        min-width: calc(50% - 10px);
+        font-size: 0.8rem;
+        padding: 10px 8px !important;
+    }
+    
+    .action-button {
+        padding: 0.6rem 1rem;
+        font-size: 0.85rem;
+        min-width: 120px;
+        height: 42px;
+    }
+    
+    .book-content {
+        font-size: 16px;
+        line-height: 1.6;
+    }
+    
+    .book-content h1 {
+        font-size: 1.6em;
+    }
+    
+    .book-content h2 {
+        font-size: 1.4em;
+    }
+    
+    .book-content h3 {
+        font-size: 1.2em;
+    }
+    
+    .book-content pre {
+        font-size: 14px;
+    }
+    
     .author-books article {
         flex-direction: column;
     }
@@ -657,4 +753,175 @@ input:not([type="checkbox"], [type="radio"]), select {
     .author-books .book-cover {
         align-self: center;
     }
+    
+    .avatar, .avatar-placeholder {
+        width: 120px;
+        height: 120px;
+        font-size: 2.5rem;
+    }
+    
+    .author-stats {
+        gap: 1rem;
+    }
+    
+    .stat-number {
+        font-size: 1.3em;
+    }
+    
+    .dashboard-buttons {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .dashboard-button {
+        flex: none;
+        width: 100%;
+    }
+    
+    .dashboard-button.new {
+        flex: none;
+        width: 100%;
+    }
+    
+    .welcome-buttons {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .welcome-buttons a {
+        width: 100%;
+        max-width: 250px;
+    }
+    
+    .action-buttons {
+        flex-direction: column;
+    }
+    
+    .action-buttons .compact-button {
+        width: 100%;
+    }
+    
+    #fullscreen-controls {
+        top: 10px !important;
+        right: 10px !important;
+    }
+    
+    #fullscreen-controls button {
+        width: 60px !important;
+        height: 60px !important;
+        font-size: 24px !important;
+        border: 2px solid #ddd !important;
+    }
+    
+    .editor-controls button {
+        width: 50px !important;
+        height: 50px !important;
+        font-size: 20px !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .adaptive-button {
+        flex: 1 1 100%;
+        min-width: 100%;
+    }
+    
+    .action-button {
+        padding: 0.5rem 0.8rem;
+        font-size: 0.8rem;
+        min-width: 110px;
+        height: 40px;
+    }
+    
+    .action-buttons-container {
+        flex-direction: column;
+        width: 100%;
+    }
+    
+    .action-buttons-container .action-button {
+        width: 100%;
+        min-width: auto;
+    }
+    
+    .avatar, .avatar-placeholder {
+        width: 100px;
+        height: 100px;
+        font-size: 2rem;
+    }
+    
+    .author-stats {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .dashboard-item {
+        padding: 0.8rem;
+    }
+    
+    .dashboard-button {
+        font-size: 0.85rem;
+        padding: 0.6rem 0.4rem;
+    }
+    
+    .welcome-message {
+        padding: 2rem 1rem;
+    }
+    
+    #fullscreen-controls button {
+        width: 55px !important;
+        height: 55px !important;
+        font-size: 22px !important;
+    }
+}
+
+@media (min-width: 769px) {
+    #fullscreen-controls {
+        top: 15px !important;
+        right: 15px !important;
+    }
+    
+    #fullscreen-controls button {
+        width: 50px !important;
+        height: 50px !important;
+        font-size: 20px !important;
+    }
+}
+
+/* Полноэкранные режимы редактора */
+#content.mobile-fullscreen {
+    position: fixed !important;
+    top: 50px !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: calc(100vh - 100px) !important;
+    z-index: 9998 !important;
+    background-color: white !important;
+    border: 2px solid #007bff !important;
+    border-radius: 0 !important;
+    font-size: 18px !important;
+    padding: 15px !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+    resize: none !important;
+    box-shadow: none !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+}
+
+#content.desktop-fullscreen {
+    position: fixed !important;
+    top: 5vh !important;
+    left: 5vw !important;
+    width: 90vw !important;
+    height: 90vh !important;
+    z-index: 9998 !important;
+    background-color: white !important;
+    border: 2px solid #007bff !important;
+    border-radius: 8px !important;
+    font-size: 16px !important;
+    padding: 20px !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+    resize: none !important;
+    box-shadow: 0 0 20px rgba(0,0,0,0.3) !important;
 }

@@ -189,4 +189,170 @@ function optimizeImage($file_path) {
         imagedestroy($new_image);
     }
 }
+
+// В includes/functions.php, после функции handleCoverUpload
+
+function handleAvatarUpload($file, $user_id) {
+    global $pdo;
+    
+    // Проверяем папку для загрузок
+    if (!file_exists(AVATARS_PATH)) {
+        mkdir(AVATARS_PATH, 0755, true);
+    }
+    
+    $allowed_types = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    $max_size = 2 * 1024 * 1024; // 2MB
+    
+    // Проверка типа файла
+    $finfo = finfo_open(FILEINFO_MIME_TYPE);
+    $mime_type = finfo_file($finfo, $file['tmp_name']);
+    finfo_close($finfo);
+    
+    if (!in_array($mime_type, $allowed_types)) {
+        return ['success' => false, 'error' => 'Разрешены только JPG, PNG, GIF и WebP изображения'];
+    }
+    
+    // Проверка размера
+    if ($file['size'] > $max_size) {
+        return ['success' => false, 'error' => 'Размер изображения не должен превышать 2MB'];
+    }
+    
+    // Проверка на ошибки загрузки
+    if ($file['error'] !== UPLOAD_ERR_OK) {
+        return ['success' => false, 'error' => 'Ошибка загрузки файла: ' . $file['error']];
+    }
+    
+    // Проверка реального типа файла по содержимому
+    $allowed_signatures = [
+        'image/jpeg' => "\xFF\xD8\xFF",
+        'image/png'  => "\x89\x50\x4E\x47",
+        'image/gif'  => "GIF",
+        'image/webp' => "RIFF"
+    ];
+    
+    $file_content = file_get_contents($file['tmp_name']);
+    $signature = substr($file_content, 0, 4);
+    
+    $valid_signature = false;
+    foreach ($allowed_signatures as $type => $sig) {
+        if (strpos($signature, $sig) === 0) {
+            $valid_signature = true;
+            break;
+        }
+    }
+    
+    if (!$valid_signature) {
+        return ['success' => false, 'error' => 'Неверный формат изображения'];
+    }
+    
+    // Генерация уникального имени файла
+    $extension = pathinfo($file['name'], PATHINFO_EXTENSION);
+    $filename = 'avatar_' . $user_id . '_' . time() . '.' . $extension;
+    $file_path = AVATARS_PATH . $filename;
+    
+    // Удаляем старый аватар если есть
+    $userModel = new User($pdo);
+    $user = $userModel->findById($user_id);
+    if (!empty($user['avatar'])) {
+        $old_file_path = AVATARS_PATH . $user['avatar'];
+        if (file_exists($old_file_path)) {
+            unlink($old_file_path);
+        }
+    }
+    
+    // Сохраняем новую аватарку
+    if (move_uploaded_file($file['tmp_name'], $file_path)) {
+        // Оптимизируем изображение
+        optimizeAvatar($file_path);
+        return ['success' => true, 'filename' => $filename];
+    } else {
+        return ['success' => false, 'error' => 'Не удалось сохранить файл'];
+    }
+}
+
+function optimizeAvatar($file_path) {
+    // Оптимизация аватарки - ресайз до 200x200
+    list($width, $height, $type) = getimagesize($file_path);
+    
+    $max_size = 200;
+    
+    if ($width > $max_size || $height > $max_size) {
+        // Вычисляем новые размеры
+        $ratio = $width / $height;
+        if ($ratio > 1) {
+            $new_width = $max_size;
+            $new_height = $max_size / $ratio;
+        } else {
+            $new_width = $max_size * $ratio;
+            $new_height = $max_size;
+        }
+        
+        // Создаем новое изображение
+        $new_image = imagecreatetruecolor($new_width, $new_height);
+        
+        // Загружаем исходное изображение в зависимости от типа
+        switch ($type) {
+            case IMAGETYPE_JPEG:
+                $source = imagecreatefromjpeg($file_path);
+                break;
+            case IMAGETYPE_PNG:
+                $source = imagecreatefrompng($file_path);
+                // Сохраняем прозрачность для PNG
+                imagecolortransparent($new_image, imagecolorallocatealpha($new_image, 0, 0, 0, 127));
+                imagealphablending($new_image, false);
+                imagesavealpha($new_image, true);
+                break;
+            case IMAGETYPE_GIF:
+                $source = imagecreatefromgif($file_path);
+                break;
+            case IMAGETYPE_WEBP:
+                $source = imagecreatefromwebp($file_path);
+                break;
+            default:
+                return; // Не поддерживаемый тип
+        }
+        
+        // Ресайз и сохраняем
+        imagecopyresampled($new_image, $source, 0, 0, 0, 0, $new_width, $new_height, $width, $height);
+        
+        switch ($type) {
+            case IMAGETYPE_JPEG:
+                imagejpeg($new_image, $file_path, 85);
+                break;
+            case IMAGETYPE_PNG:
+                imagepng($new_image, $file_path, 8);
+                break;
+            case IMAGETYPE_GIF:
+                imagegif($new_image, $file_path);
+                break;
+            case IMAGETYPE_WEBP:
+                imagewebp($new_image, $file_path, 85);
+                break;
+        }
+        
+        // Освобождаем память
+        imagedestroy($source);
+        imagedestroy($new_image);
+    }
+}
+
+function deleteUserAvatar($user_id) {
+    global $pdo;
+    
+    $userModel = new User($pdo);
+    $user = $userModel->findById($user_id);
+    
+    if (!empty($user['avatar'])) {
+        $file_path = AVATARS_PATH . $user['avatar'];
+        if (file_exists($file_path)) {
+            unlink($file_path);
+        }
+        
+        // Обновляем запись в БД
+        $stmt = $pdo->prepare("UPDATE users SET avatar = NULL WHERE id = ?");
+        return $stmt->execute([$user_id]);
+    }
+    
+    return true;
+}
 ?>

@@ -36,11 +36,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (empty($title)) {
         $_SESSION['error'] = "Название книги обязательно";
     } else {
+        $series_id = !empty($_POST['series_id']) ? (int)$_POST['series_id'] : null;
+        $sort_order_in_series = !empty($_POST['sort_order_in_series']) ? (int)$_POST['sort_order_in_series'] : null;
+
+        // Если серия указана, но порядок нет - генерируем автоматически
+        if ($series_id && !$sort_order_in_series) {
+            $seriesModel = new Series($pdo);
+            $sort_order_in_series = $seriesModel->getNextSortOrder($series_id);
+        }
+
         $data = [
             'title' => $title,
             'description' => $description,
             'genre' => $genre,
-            'user_id' => $user_id
+            'user_id' => $user_id,
+            'series_id' => $series_id,
+            'sort_order_in_series' => $sort_order_in_series
         ];
         $data['published'] = isset($_POST['published']) ? 1 : 0;
         
@@ -110,7 +121,32 @@ include 'views/header.php';
                value="<?= e($book['genre'] ?? $_POST['genre'] ?? '') ?>" 
                placeholder="Например: Фантастика, Роман, Детектив..."
                style="width: 100%; margin-bottom: 1.5rem;">
-        
+        <label for="series_id" style="display: block; margin-bottom: 0.5rem; font-weight: bold;">
+            Серия
+        </label>
+        <select id="series_id" name="series_id" style="width: 100%; margin-bottom: 1rem;">
+            <option value="">-- Без серии --</option>
+            <?php
+            $seriesModel = new Series($pdo);
+            $user_series = $seriesModel->findByUser($user_id, false);
+            
+            foreach ($user_series as $ser):
+                $selected = ($ser['id'] == ($book['series_id'] ?? 0)) ? 'selected' : '';
+            ?>
+                <option value="<?= $ser['id'] ?>" <?= $selected ?>>
+                    <?= e($ser['title']) ?>
+                </option>
+            <?php endforeach; ?>
+        </select>
+
+        <label for="sort_order_in_series" style="display: block; margin-bottom: 0.5rem; font-weight: bold;">
+            Порядок в серии
+        </label>
+        <input type="number" id="sort_order_in_series" name="sort_order_in_series" 
+            value="<?= e($book['sort_order_in_series'] ?? '') ?>" 
+            placeholder="Номер по порядку в серии"
+            min="1"
+            style="width: 100%; margin-bottom: 1.5rem;">
         <!-- ПОЛЕ ДЛЯ ОБЛОЖКИ -->
         <div style="margin-bottom: 1.5rem;">
             <label for="cover_image" style="display: block; margin-bottom: 0.5rem; font-weight: bold;">

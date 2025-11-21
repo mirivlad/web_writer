@@ -61,6 +61,25 @@ include 'views/header.php';
             <?php endif; ?>
             
             <h1 style="margin-bottom: 0.5rem;"><?= e($book['title']) ?></h1>
+            <!-- В view_book.php, после информации об авторе -->
+            <?php if ($book['series_id']): ?>
+                <?php
+                $series_stmt = $pdo->prepare("SELECT id, title FROM series WHERE id = ?");
+                $series_stmt->execute([$book['series_id']]);
+                $series = $series_stmt->fetch();
+                ?>
+                <?php if ($series): ?>
+                    <p style="color: #666; margin-bottom: 0.5rem;">
+                        📚 Часть серии: 
+                        <a href="view_series.php?id=<?= $series['id'] ?>" style="color: #007bff;">
+                            <?= e($series['title']) ?>
+                            <?php if ($book['sort_order_in_series']): ?>
+                                (Книга <?= $book['sort_order_in_series'] ?>)
+                            <?php endif; ?>
+                        </a>
+                    </p>
+                <?php endif; ?>
+            <?php endif; ?>
             <p style="color: #666; font-style: italic; margin-bottom: 0.5rem;"><?= e($author_name) ?></p>
             
             <?php if ($book['genre']): ?>

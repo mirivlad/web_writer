@@ -29,7 +29,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $_SESSION['user_id'] = $user['id'];
                     $_SESSION['username'] = $user['username'];
                     $_SESSION['display_name'] = $user['display_name'] ?: $user['username'];
-                    
+                    $_SESSION['avatar'] = $user['avatar'] ?? null;
                     // Обновляем время последнего входа
                     $userModel->updateLastLogin($user['id']);
                     

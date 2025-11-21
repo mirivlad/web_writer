@@ -57,6 +57,23 @@ include 'views/header.php';
             <?php endif; ?>
             <header>
                 <h3><?= e($book['title']) ?>
+                <?php if ($book['series_id']): ?>
+                    <?php
+                    $series_stmt = $pdo->prepare("SELECT title FROM series WHERE id = ?");
+                    $series_stmt->execute([$book['series_id']]);
+                    $series_title = $series_stmt->fetch()['title'] ?? '';
+                    ?>
+                    <?php if ($series_title): ?>
+                        <div style="margin: 0.3rem 0;">
+                            <small style="color: #007bff;">
+                                📚 Серия: <?= e($series_title) ?>
+                                <?php if ($book['sort_order_in_series']): ?>
+                                    (Книга <?= $book['sort_order_in_series'] ?>)
+                                <?php endif; ?>
+                            </small>
+                        </div>
+                    <?php endif; ?>
+                <?php endif; ?>
                     <div style="display: flex; gap: 3px; float:right;">
                         <a href="book_edit.php?id=<?= $book['id'] ?>" class="compact-button secondary" title="Редактировать книгу">
                             ✏️

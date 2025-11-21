@@ -19,17 +19,26 @@
     <ul>
         <?php if (is_logged_in()): ?>
             <li><a href="/dashboard.php">📊 Панель</a></li>
+            <li><a href="/series.php">📚 Мои серии</a></li>
             <li><a href="/books.php">📚 Мои книги</a></li>
+            
             <?php if ($_SESSION['user_id'] == 1): ?>
                 <li><a href="/admin/users.php">👥 Пользователи</a></li>
             <?php endif; ?>
             <li>
                 <details role="list" dir="rtl">
-                    <summary aria-haspopup="listbox" role="link">
+                    <summary aria-haspopup="listbox" role="link" style="display: flex; align-items: center; gap: 0.5rem;">
+                        <?php if (!empty($_SESSION['avatar'])): ?>
+                            <img src="<?= AVATARS_URL . e($_SESSION['avatar']) ?>" 
+                                alt="Аватар" 
+                                style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;"
+                                onerror="this.style.display='none'">
+                        <?php endif; ?>
                         👤 <?= e($_SESSION['display_name']) ?>
                     </summary>
                     <ul role="listbox">
                         <li><a href="/profile.php">Настройки профиля</a></li>
+                        <li><a href="/author.php?id=<?= $_SESSION['user_id'] ?>" target="_blank">Моя публичная страница</a></li>
                         <li><a href="/logout.php">Выйти</a></li>
                     </ul>
                 </details>

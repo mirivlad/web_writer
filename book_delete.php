@@ -28,7 +28,7 @@ if (!$bookModel->userOwnsBook($book_id, $user_id)) {
     redirect('books.php');
 }
 
-// Получаем информацию о книге перед удалением (для сообщения)
+// Получаем информацию о книге перед удалением
 $book = $bookModel->findById($book_id);
 if (!empty($book['cover_image'])) {
     $cover_path = COVERS_PATH . $book['cover_image'];

@@ -117,7 +117,7 @@ include 'views/header.php';
         </article>
         <?php endforeach; ?>
     </div>
-    <!-- Модальное окно для удаления всех книг -->
+    <!-- Подтверждение удаления всех книг -->
     <dialog id="deleteAllDialog" style="border-radius: 8px; padding: 20px; max-width: 500px; background-color: #fff;">
         <h3 style="margin-top: 0;">Удалить все книги?</h3>
         <p>Это действие удалит все ваши книги и все связанные с ними главы. Это действие нельзя отменить.</p>

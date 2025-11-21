@@ -55,10 +55,7 @@ if ($book) {
 }
 
 $author_name = $author_info['display_name'] ?? $author_info['username'] ?? 'Неизвестный автор';
-// Функция для очистки имени файла
-// function cleanFilename($filename) {
-//     return preg_replace('/[^a-zA-Z0-9_\-]/', '_', $filename);
-// }
+
 
 // Функция для преобразования Markdown в чистый текст с форматированием абзацев
 function markdownToPlainText($markdown) {
@@ -98,7 +95,7 @@ function markdownToPlainText($markdown) {
     
     return $text;
 }
-// Улучшенная функция для разбивки Markdown на абзацы с сохранением структуры
+// Функция для разбивки Markdown на абзацы с сохранением структуры
 function markdownToParagraphs($markdown) {
     // Нормализуем переносы строк
     $text = str_replace(["\r\n", "\r"], "\n", $markdown);
@@ -239,9 +236,6 @@ switch ($format) {
     case 'docx':
         exportDOCX($book, $chapters, $is_public, $author_name);
         break;
-    case 'odt':
-        exportODT($book, $chapters, $is_public, $author_name);
-        break;
     case 'html':
         exportHTML($book, $chapters, $is_public, $author_name);
         break;
@@ -317,7 +311,7 @@ function exportPDF($book, $chapters, $is_public, $author_name) {
         $pdf->Ln(10);
     }
     
-    // Интерактивное оглавление - СОЗДАЕМ ССЫЛКИ
+    // Интерактивное оглавление
     $chapterLinks = [];
     if (!empty($chapters)) {
         $pdf->SetFont('dejavusans', 'B', 14);
@@ -433,7 +427,7 @@ function exportDOCX($book, $chapters, $is_public, $author_name) {
         
         foreach ($chapters as $index => $chapter) {
             $chapter_number = $index + 1;
-            // Создаем гиперссылку на заголовок главы - ИСПРАВЛЕННЫЙ СИНТАКСИС
+            // Создаем гиперссылку на заголовок главы
             $section->addLink("chapter_{$chapter['id']}", "{$chapter_number}. {$chapter['title']}", null, null, true);
             $section->addTextBreak(1);
         }
@@ -443,9 +437,9 @@ function exportDOCX($book, $chapters, $is_public, $author_name) {
     // Разделитель
     $section->addPageBreak();
     
-    // Главы с закладками - ДОБАВЛЯЕМ ПРАВИЛЬНЫЕ ЗАКЛАДКИ
+    // Главы с закладками
     foreach ($chapters as $index => $chapter) {
-        // Добавляем закладку для главы ПЕРЕД заголовком
+        // Добавляем закладку для главы
         $section->addBookmark("chapter_{$chapter['id']}");
         
         // Заголовок главы
@@ -588,7 +582,7 @@ function exportHTML($book, $chapters, $is_public, $author_name) {
                 font-size: 12px;
                 color: #666;
             }
-            /* Улучшаем отображение абзацев */
+            /* Отображение абзацев */
             .chapter-content p {
                 margin-bottom: 1em;
                 text-align: justify;
@@ -720,7 +714,7 @@ function exportTXT($book, $chapters, $is_public, $author_name) {
     
     if (!empty($book['description'])) {
         $content .= "ОПИСАНИЕ:\n";
-        // Увеличиваем ширину до 144 символов (80 * 1.8)
+        // Ширина до 144 символов
         $content .= wordwrap($book['description'], 144) . "\n\n";
     }
     

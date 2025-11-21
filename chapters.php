@@ -13,7 +13,7 @@ if (!$book_id) {
 $bookModel = new Book($pdo);
 $chapterModel = new Chapter($pdo);
 
-// Проверяем права доступа к книге
+
 if (!$bookModel->userOwnsBook($book_id, $user_id)) {
     $_SESSION['error'] = "У вас нет доступа к этой книге";
     redirect('books.php');

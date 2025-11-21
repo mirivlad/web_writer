@@ -2,8 +2,6 @@
 require_once 'config/config.php';
 require_login();
 
-// Подключаем функции для обложек
-
 $user_id = $_SESSION['user_id'];
 $bookModel = new Book($pdo);
 
@@ -99,8 +97,6 @@ $page_title = $is_edit ? "Редактирование книги" : "Созда
 include 'views/header.php';
 ?>
 
-<!-- Остальная часть формы остается той же, но добавляем поле обложки -->
-
 <form method="post" enctype="multipart/form-data">
     <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
     
@@ -147,7 +143,7 @@ include 'views/header.php';
             placeholder="Номер по порядку в серии"
             min="1"
             style="width: 100%; margin-bottom: 1.5rem;">
-        <!-- ПОЛЕ ДЛЯ ОБЛОЖКИ -->
+        <!-- Обложка -->
         <div style="margin-bottom: 1.5rem;">
             <label for="cover_image" style="display: block; margin-bottom: 0.5rem; font-weight: bold;">
                 Обложка книги

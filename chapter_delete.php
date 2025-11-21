@@ -28,7 +28,7 @@ if (!$chapterModel->userOwnsChapter($chapter_id, $user_id)) {
     redirect('books.php');
 }
 
-// Получаем информацию о главе перед удалением (для редиректа)
+
 $chapter = $chapterModel->findById($chapter_id);
 $book_id = $chapter['book_id'];
 
@@ -39,6 +39,5 @@ if ($chapterModel->delete($chapter_id)) {
     $_SESSION['error'] = "Ошибка при удалении главы";
 }
 
-// Редирект обратно к списку глав книги
 redirect("chapters.php?book_id=$book_id");
 ?>

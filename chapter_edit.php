@@ -23,7 +23,6 @@ if ($chapter_id) {
     $is_edit = true;
 }
 
-// Проверяем, что book_id указан и пользователь имеет доступ к книге
 if (!$book_id) {
     $_SESSION['error'] = "Не указана книга";
     redirect('books.php');
@@ -47,8 +46,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Обработка автосохранения
     if (isset($_POST['autosave']) && $_POST['autosave'] === 'true') {
         // Автосохранение работает только для существующих глав
+        // Если это не редактирование, игнорируем автосохранение
         if (!$is_edit) {
-            // Если это не редактирование, игнорируем автосохранение
+            
             header('Content-Type: application/json');
             echo json_encode(['success' => false, 'message' => 'Автосохранение недоступно для новых глав']);
             exit;
@@ -200,7 +200,6 @@ include 'views/header.php';
     </div>
 </form>
 
-<!-- Основные кнопки формы - Сохранить, Отмена и Предпросмотр -->
 <div class="button-group">
     <button type="submit" form="main-form" class="contrast">
         <?= $is_edit ? '💾 Сохранить изменения' : '📝 Создать главу' ?>
@@ -215,13 +214,12 @@ include 'views/header.php';
     </button>
 </div>
 
-<!-- Скрытая форма для предпросмотра -->
+<!-- Форма для предпросмотра -->
 <form method="post" action="preview.php" target="_blank" id="preview-form" style="display: none;">
     <input type="hidden" name="content" id="preview-content">
     <input type="hidden" name="title" id="preview-title" value="<?= e($chapter['title'] ?? 'Новая глава') ?>">
 </form>
 
-<!-- Дополнительные кнопки (вне основной формы) -->
 <?php if ($is_edit): ?>
 <div class="button-group">
     <a href="chapter_edit.php?book_id=<?= $book_id ?>" role="button">

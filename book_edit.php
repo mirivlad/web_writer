@@ -30,6 +30,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $title = trim($_POST['title'] ?? '');
     $description = trim($_POST['description'] ?? '');
     $genre = trim($_POST['genre'] ?? '');
+    $editor_type = $_POST['editor_type'] ?? 'markdown';
     
     if (empty($title)) {
         $_SESSION['error'] = "Название книги обязательно";
@@ -37,7 +38,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $series_id = !empty($_POST['series_id']) ? (int)$_POST['series_id'] : null;
         $sort_order_in_series = !empty($_POST['sort_order_in_series']) ? (int)$_POST['sort_order_in_series'] : null;
 
-        // Если серия указана, но порядок нет - генерируем автоматически
         if ($series_id && !$sort_order_in_series) {
             $seriesModel = new Series($pdo);
             $sort_order_in_series = $seriesModel->getNextSortOrder($series_id);
@@ -49,10 +49,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'genre' => $genre,
             'user_id' => $user_id,
             'series_id' => $series_id,
-            'sort_order_in_series' => $sort_order_in_series
+            'sort_order_in_series' => $sort_order_in_series,
+            'editor_type' => $editor_type
         ];
         $data['published'] = isset($_POST['published']) ? 1 : 0;
         
+        // Проверяем, изменился ли тип редактора
+        $editor_changed = false;
+        $old_editor_type = null;
+        
+        if ($is_edit && $book['editor_type'] !== $editor_type) {
+            $editor_changed = true;
+            $old_editor_type = $book['editor_type'];
+        }
         // Обработка загрузки обложки
         if (isset($_FILES['cover_image']) && $_FILES['cover_image']['error'] === UPLOAD_ERR_OK) {
             $cover_result = handleCoverUpload($_FILES['cover_image'], $book_id);
@@ -73,6 +82,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         if ($is_edit) {
             $success = $bookModel->update($book_id, $data);
+            
+            // Конвертируем контент глав, если изменился редактор
+            if ($success && $editor_changed) {
+                $conversion_success = $bookModel->convertChaptersContent($book_id, $old_editor_type, $editor_type);
+                if (!$conversion_success) {
+                    $_SESSION['warning'] = "Книга обновлена, но возникли ошибки при конвертации содержания глав";
+                } else {
+                    $_SESSION['info'] = "Книга обновлена. Содержание глав сконвертировано в новый формат редактора.";
+                }
+            }
+            
             $message = $success ? "Книга успешно обновлена" : "Ошибка при обновлении книги";
         } else {
             $success = $bookModel->create($data);
@@ -117,6 +137,41 @@ include 'views/header.php';
                value="<?= e($book['genre'] ?? $_POST['genre'] ?? '') ?>" 
                placeholder="Например: Фантастика, Роман, Детектив..."
                style="width: 100%; margin-bottom: 1.5rem;">
+
+        <label for="editor_type" style="display: block; margin-bottom: 0.5rem; font-weight: bold;">
+            Режим редактора
+        </label>
+        <select id="editor_type" name="editor_type" style="width: 100%; margin-bottom: 1.5rem;" onchange="showEditorWarning(this)">
+            <option value="markdown" <?= ($book['editor_type'] ?? 'markdown') == 'markdown' ? 'selected' : '' ?>>Markdown редактор</option>
+            <option value="html" <?= ($book['editor_type'] ?? '') == 'html' ? 'selected' : '' ?>>HTML редактор (TinyMCE)</option>
+        </select>
+
+        <div id="editor_warning" style="display: none; background: #fff3cd; border: 1px solid #ffeaa7; padding: 10px; border-radius: 4px; margin-bottom: 1rem;">
+            <strong>Внимание:</strong> При смене редактора содержимое всех глав будет автоматически сконвертировано в новый формат.
+        </div>
+
+        <script>
+        function showEditorWarning(select) {
+            const warning = document.getElementById('editor_warning');
+            const currentEditor = '<?= $book['editor_type'] ?? 'markdown' ?>';
+            
+            if (select.value !== currentEditor) {
+                warning.style.display = 'block';
+            } else {
+                warning.style.display = 'none';
+            }
+        }
+
+        // Показать предупреждение при загрузке, если редактор уже отличается
+        document.addEventListener('DOMContentLoaded', function() {
+            const currentEditor = '<?= $book['editor_type'] ?? 'markdown' ?>';
+            const selectedEditor = document.getElementById('editor_type').value;
+            
+            if (currentEditor !== selectedEditor) {
+                document.getElementById('editor_warning').style.display = 'block';
+            }
+        });
+        </script>
         <label for="series_id" style="display: block; margin-bottom: 0.5rem; font-weight: bold;">
             Серия
         </label>
@@ -197,48 +252,60 @@ include 'views/header.php';
     </div>
     
     <div style="display: flex; gap: 5px; flex-wrap: wrap; align-items: center;">
-        <button type="submit" class="contrast compact-button">
+        <button type="submit" class="contrast button">
             <?= $is_edit ? '💾 Сохранить изменения' : '📖 Создать книгу' ?>
         </button>
     </div>
 </form>
 <?php if ($is_edit): ?>
+    <form method="post" action="book_normalize_content.php" onsubmit="return confirm('Нормализовать контент всех глав книги? Это действие нельзя отменить.')">
+        <input type="hidden" name="book_id" value="<?= $book_id ?>">
+        <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
+        <button type="submit" class="button secondary">🔄 Нормализовать контент глав</button>
+        <p style="margin-top: 0.5rem; font-size: 0.8em; color: #666;">
+            Если контент глав отображается неправильно после смены редактора, можно нормализовать его структуру.
+        </p>
+    </form>    
+    
+<?php endif; ?>
+<?php if ($is_edit): ?>
 <form method="post" action="book_delete.php" style="display: inline;" onsubmit="return confirm('Вы уверены, что хотите удалить книгу «<?= e($book['title']) ?>»? Все главы также будут удалены.');">
     <input type="hidden" name="book_id" value="<?= $book['id'] ?>">
     <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
-    <button type="submit" class="compact-button secondary" style="background: #ff4444; border-color: #ff4444; color: white;" title="Удалить книгу">
-        🗑️
+    <button type="submit" class="compact secondary" style="background: #ff4444; border-color: #ff4444; color: white;" title="Удалить книгу">
+        🗑️ Удалить главу
     </button>
 </form>
 <?php endif ?>
+
 <?php if ($is_edit): ?>
 <div style="margin-top: 2rem; padding: 1rem; background: #f8f9fa; border-radius: 5px;">
     <h3>Публичная ссылка для чтения</h3>
-    <p style="margin-bottom: 0.5rem;">Отправьте эту ссылку читателям для просмотра опубликованных глав:</p>
-    
     <div style="display: flex; gap: 5px; align-items: center; flex-wrap: wrap;">
         <input type="text" 
                id="share-link" 
                value="<?= e(SITE_URL . '/view_book.php?share_token=' . $book['share_token']) ?>" 
                readonly 
-               style="flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px; background: white;">
-        
-        <button type="button" onclick="copyShareLink()" class="compact-button secondary">
+               style="flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px; background: white; width:80%;">
+        <br>
+        <button type="button" onclick="copyShareLink()" class="compact-button secondary" style="width: 15%;">
             📋 Копировать
         </button>
         
-        <form method="post" action="book_regenerate_token.php" style="display: inline;">
+        <form method="post" action="book_regenerate_token.php" style="display: inline; margin-top: 1.5em;">
             <input type="hidden" name="book_id" value="<?= $book_id ?>">
             <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
-            <button type="submit" class="compact-button secondary" onclick="return confirm('Создать новую ссылку? Старая ссылка перестанет работать.')">
+            <button type="submit" class="compact-button secondary" onclick="return confirm('Создать новую ссылку? Старая ссылка перестанет работать.')" >
                 🔄 Обновить
             </button>
+
         </form>
+        <p style="margin-top: -1rem; font-size: 0.8em; color: #666; width: 100%;">
+            <strong>Примечание:</strong> В публичном просмотре отображаются только главы со статусом "Опубликована"
+        </p>
     </div>
     
-    <p style="margin-top: 0.5rem; font-size: 0.9em; color: #666;">
-        <strong>Примечание:</strong> В публичном просмотре отображаются только главы со статусом "Опубликована"
-    </p>
+    
 </div>
 
 <script>

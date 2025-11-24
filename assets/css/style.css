@@ -923,3 +923,37 @@ article > header, article > footer {
     resize: none !important;
     box-shadow: 0 0 20px rgba(0,0,0,0.3) !important;
 }
+
+/* Стили для TinyMCE редактора */
+.tox-tinymce {
+    border-radius: 4px !important;
+    border: 1px solid #ddd !important;
+}
+
+.tox-tinymce:focus {
+    border-color: #007bff !important;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25) !important;
+}
+
+/* Адаптивность для TinyMCE */
+@media (max-width: 768px) {
+    .tox-tinymce {
+        border-radius: 0 !important;
+    }
+    
+    .tox-toolbar {
+        flex-wrap: wrap !important;
+    }
+}
+
+.alert-info {
+    background: #d1ecf1;
+    color: #0c5460;
+    border: 1px solid #bee5eb;
+}
+
+.alert-warning {
+    background: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffeaa7;
+}

@@ -161,8 +161,14 @@ include 'views/header.php';
                         <a href="#start" style="text-decoration: none; color: #666; font-size: 0.8em; margin-left: 1rem;">🔗</a>
                     </h2>
                     <div class="chapter-content" style="line-height: 1.6; font-size: 1.1em;">
-                        <?= $Parsedown->text($chapter['content']) ?>
+                        <?php if ($book['editor_type'] == 'markdown'): ?>
+                            <?= $Parsedown->text($chapter['content']) ?>
+                        <?php else: ?>
+                            <?= $chapter['content'] ?>
+                        <?php endif; ?>
                     </div>
+
+
                     <div style="margin-top: 1rem; padding-top: 0.5rem; border-top: 1px dashed #eee; color: #666; font-size: 0.9em;">
                         <small>Обновлено: <?= date('d.m.Y', strtotime($chapter['updated_at'])) ?></small>
                         <a href="#top" style="float: right; color: #007bff; text-decoration: none;">↑ Наверх</a>

@@ -61,6 +61,7 @@ CREATE TABLE `books` (
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   `share_token` varchar(32) DEFAULT NULL,
   `published` tinyint(1) NOT NULL DEFAULT 0,
+  `editor_type` ENUM('markdown', 'html') DEFAULT 'markdown',
   PRIMARY KEY (`id`),
   UNIQUE KEY `share_token` (`share_token`),
   KEY `user_id` (`user_id`),

@@ -186,16 +186,113 @@ include 'views/header.php';
         
         <label for="content" style="display: block; margin-bottom: 0; font-weight: bold;">
             Содержание главы
+            <?php if (isset($book['editor_type'])): ?>
+                <small style="color: #666; font-weight: normal;">
+                    (Режим: <?= $book['editor_type'] == 'markdown' ? 'Markdown' : 'HTML' ?>)
+                </small>
+            <?php endif; ?>
         </label>
-        <textarea name="content" id="content"
+
+        <?php if (($book['editor_type'] ?? 'markdown') === 'html'): ?>
+            <!-- HTML редактор (TinyMCE) -->
+            <textarea name="content" id="content" style="width: 100%; min-height: 500px;">
+                <?= e($chapter['content'] ?? $_POST['content'] ?? '') ?>
+            </textarea>
+            
+            <!-- Подключаем TinyMCE -->
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/tinymce/6.8.6/tinymce.min.js" referrerpolicy="origin"></script>
+            <script>
+                tinymce.init({
+                    selector: '#content',
+                    plugins: 'advlist autolink lists link image charmap preview anchor pagebreak searchreplace wordcount visualblocks visualchars code fullscreen insertdatetime media table emoticons',
+                    toolbar: 'undo redo | blocks | bold italic underline strikethrough | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | link image media | code preview fullscreen',
+                    menubar: 'edit view insert format tools table',
+                    height: 500,
+                    language: 'ru',
+                    branding: false,
+                    promotion: false,
+                    image_advtab: true,
+                    
+                    // Важные настройки для сохранения структуры
+                    forced_root_block: 'p', // Используем <p> вместо <div>
+                    force_br_newlines: false, // Не использовать <br> вместо абзацев
+                    force_p_newlines: true, // Всегда создавать новые абзацы при Enter
+                    convert_newlines_to_brs: false, // Не конвертировать переносы в <br>
+                    remove_trailing_brs: true, // Убирать лишние <br> в конце
+                    
+                    // Настройки форматирования
+                    formats: {
+                        // Сохраняем семантическое форматирование
+                        bold: { inline: 'strong' },
+                        italic: { inline: 'em' },
+                        underline: { inline: 'u', exact: true },
+                        strikethrough: { inline: 'del' }
+                    },
+                    
+                    // Настройки контента
+                    content_style: `
+                        body { 
+                            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+                            font-size: 14px; 
+                            line-height: 1.6;
+                            margin: 0;
+                            padding: 10px;
+                        }
+                        p { 
+                            margin: 0 0 1em 0;
+                        }
+                        h1, h2, h3, h4, h5, h6 {
+                            margin: 1em 0 0.5em 0;
+                        }
+                    `,
+                    
+                    // Настройки для чистого HTML
+                    valid_elements: '*[*]', // Разрешаем все элементы (можно ограничить при необходимости)
+                    valid_children: '+body[p,div,h1,h2,h3,h4,h5,h6,blockquote,pre,ul,ol,li,table]',
+                    
+                    // Автосохранение
+                    setup: function (editor) {
+                        editor.on('init', function () {
+                            // Нормализуем контент при инициализации
+                            var content = editor.getContent();
+                            if (content && !content.match(/<p[^>]*>/) && content.trim().length > 0) {
+                                // Если нет тегов абзацев, оборачиваем в <p>
+                                editor.setContent('<p>' + content.replace(/\n/g, '</p><p>') + '</p>');
+                            }
+                        });
+                        
+                        editor.on('keydown', function (e) {
+                            clearTimeout(window.tinymceSaveTimeout);
+                            window.tinymceSaveTimeout = setTimeout(function() {
+                                if (typeof autoSave === 'function') {
+                                    autoSave();
+                                }
+                            }, 2000);
+                        });
+                        
+                        // Обработка вставки текста
+                        editor.on('paste', function (e) {
+                            // Нормализуем вставленный текст
+                            setTimeout(function() {
+                                var content = editor.getContent();
+                                // Убеждаемся, что контент имеет правильную структуру абзацев
+                                editor.setContent(content);
+                            }, 100);
+                        });
+                    }
+                });
+                </script>
+        <?php else: ?>
+            <!-- Markdown редактор (существующий) -->
+            <textarea name="content" id="content"
                     placeholder="Начните писать вашу главу здесь..." 
                     rows="15"
                     style="width: 100%; font-family: monospace;"><?= e($chapter['content'] ?? $_POST['content'] ?? '') ?></textarea>
-        <?php if ($is_edit && isset($chapter['word_count'])): ?>
-            <div style="background: #f5f5f5; padding: 10px; border-radius: 5px; margin-bottom: 1rem;">
-                <strong>Статистика:</strong> <?= $chapter['word_count'] ?> слов
-                | Обновлено: <?= date('d.m.Y H:i', strtotime($chapter['updated_at'])) ?>
-            </div>
+            
+            <script src="/assets/js/markdown-editor.js"></script>
+            <?php if ($is_edit): ?>
+                <script src="/assets/js/autosave.js"></script>
+            <?php endif; ?>
         <?php endif; ?>
     </div>
 </form>
@@ -218,6 +315,7 @@ include 'views/header.php';
 <form method="post" action="preview.php" target="_blank" id="preview-form" style="display: none;">
     <input type="hidden" name="content" id="preview-content">
     <input type="hidden" name="title" id="preview-title" value="<?= e($chapter['title'] ?? 'Новая глава') ?>">
+    <input type="hidden" name="editor_type" id="preview-editor-type" value="<?= e($book['editor_type'] ?? 'markdown') ?>">
 </form>
 
 <?php if ($is_edit): ?>
@@ -283,9 +381,6 @@ document.getElementById('preview-button').addEventListener('click', function() {
 });
 </script>
 
-<script src="assets/js/markdown-editor.js"></script>
-<?php if ($is_edit): ?>
-    <script src="assets/js/autosave.js"></script>
-<?php endif; ?>
+
 
 <?php include 'views/footer.php'; ?>

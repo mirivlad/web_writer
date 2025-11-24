@@ -49,3 +49,16 @@
     </ul>
 </nav>
     <main class="container">
+        <?php if (isset($_SESSION['info'])): ?>
+            <div class="alert alert-info">
+                <?= e($_SESSION['info']) ?>
+                <?php unset($_SESSION['info']); ?>
+            </div>
+        <?php endif; ?>
+
+        <?php if (isset($_SESSION['warning'])): ?>
+            <div class="alert alert-warning">
+                <?= e($_SESSION['warning']) ?>
+                <?php unset($_SESSION['warning']); ?>
+            </div>
+        <?php endif; ?>

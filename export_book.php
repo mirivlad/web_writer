@@ -47,14 +47,18 @@ if (!$book) {
     redirect('books.php');
 }
 // Получаем информацию об авторе
-$author_info = null;
+$author_info = "Неизвестный автор";
 if ($book) {
     $stmt = $pdo->prepare("SELECT display_name, username FROM users WHERE id = ?");
     $stmt->execute([$book['user_id']]);
     $author_info = $stmt->fetch(PDO::FETCH_ASSOC);
-}
+    if ($author_info['display_name'] !=""){
+        $author_name = $author_info['display_name'];
+    }else{
+        $author_name = $author_info['username'] ;
+    }
 
-$author_name = $author_info['display_name'] ?? $author_info['username'] ?? 'Неизвестный автор';
+}
 
 
 // Функция для преобразования Markdown в чистый текст с форматированием абзацев
@@ -354,7 +358,11 @@ function exportPDF($book, $chapters, $is_public, $author_name) {
         
         // Контент главы
         $pdf->SetFont('dejavusans', '', 11);
-        $htmlContent = $Parsedown->text($chapter['content']);
+        if ($book['editor_type'] == 'markdown') {
+            $htmlContent = $Parsedown->text($chapter['content']);
+        } else {
+            $htmlContent = $chapter['content'];
+        }
         $pdf->writeHTML($htmlContent, true, false, true, false, '');
         
         $pdf->Ln(8);
@@ -413,9 +421,16 @@ function exportDOCX($book, $chapters, $is_public, $author_name) {
     
     // Описание
     if (!empty($book['description'])) {
-        $descriptionParagraphs = markdownToParagraphs($book['description']);
+        if ($book['editor_type'] == 'markdown') {
+            $descriptionParagraphs = markdownToParagraphs($book['description']);
+        } else {
+            $descriptionParagraphs = htmlToParagraphs($book['description']);
+        }
+        
         foreach ($descriptionParagraphs as $paragraph) {
-            $section->addText($paragraph);
+            if (!empty(trim($paragraph))) {
+                $section->addText($paragraph);
+            }
         }
         $section->addTextBreak(2);
     }
@@ -446,9 +461,14 @@ function exportDOCX($book, $chapters, $is_public, $author_name) {
         $section->addText($chapter['title'], ['bold' => true, 'size' => 14]);
         $section->addTextBreak(1);
         
-        // Получаем очищенный текст и разбиваем на абзацы
-        $cleanContent = cleanMarkdown($chapter['content']);
-        $paragraphs = markdownToParagraphs($cleanContent);
+        // Получаем очищенный текст и разбиваем на абзацы в зависимости от типа редактора
+        if ($book['editor_type'] == 'markdown') {
+            $cleanContent = cleanMarkdown($chapter['content']);
+            $paragraphs = markdownToParagraphs($cleanContent);
+        } else {
+            $cleanContent = strip_tags($chapter['content']);
+            $paragraphs = htmlToParagraphs($chapter['content']);
+        }
         
         // Добавляем каждый абзац
         foreach ($paragraphs as $paragraph) {
@@ -477,6 +497,23 @@ function exportDOCX($book, $chapters, $is_public, $author_name) {
     $objWriter = IOFactory::createWriter($phpWord, 'Word2007');
     $objWriter->save('php://output');
     exit;
+}
+
+// Новая функция для разбивки HTML на абзацы
+function htmlToParagraphs($html) {
+    // Убираем HTML теги и нормализуем пробелы
+    $text = strip_tags($html);
+    $text = preg_replace('/\s+/', ' ', $text);
+    
+    // Разбиваем на абзацы по точкам и переносам строк
+    $paragraphs = preg_split('/(?<=[.!?])\s+/', $text);
+    
+    // Фильтруем пустые абзацы
+    $paragraphs = array_filter($paragraphs, function($paragraph) {
+        return !empty(trim($paragraph));
+    });
+    
+    return $paragraphs;
 }
 
 function exportHTML($book, $chapters, $is_public, $author_name) {
@@ -539,7 +576,7 @@ function exportHTML($book, $chapters, $is_public, $author_name) {
                 padding: 20px;
                 border-radius: 5px;
                 margin: 20px 0;
-                columns: 2;
+                columns: 1;
                 column-gap: 2rem;
             }
             .table-of-contents h3 {
@@ -657,12 +694,18 @@ function exportHTML($book, $chapters, $is_public, $author_name) {
         }
         
         if (!empty($book['description'])) {
-            $html .= '<div class="book-description">' . nl2br(htmlspecialchars($book['description'])) . '</div>';
+            $html .= '<div class="book-description">';
+            if ($book['editor_type'] == 'markdown') {
+                $html .= nl2br(htmlspecialchars($book['description']));
+            } else {
+                $html .= $book['description'];
+            }
+            $html .= '</div>';
         }
         
         // Интерактивное оглавление
         if (!empty($chapters)) {
-            $html .= '<div>';
+            $html .= '<div class="table-of-contents">';
             $html .= '<h3>Оглавление</h3>';
             $html .= '<ul>';
             foreach ($chapters as $index => $chapter) {
@@ -679,7 +722,13 @@ function exportHTML($book, $chapters, $is_public, $author_name) {
             $html .= '<div class="chapter">';
             $html .= '<div class="chapter-title" id="chapter-' . $chapter['id'] . '" name="chapter-' . $chapter['id'] . '">' . htmlspecialchars($chapter['title']) . '</div>';
             
-            $htmlContent = $Parsedown->text($chapter['content']);
+            // Обрабатываем контент в зависимости от типа редактора
+            if ($book['editor_type'] == 'markdown') {
+                $htmlContent = $Parsedown->text($chapter['content']);
+            } else {
+                $htmlContent = $chapter['content'];
+            }
+            
             $html .= '<div class="chapter-content">' . $htmlContent . '</div>';
             $html .= '</div>';
             
@@ -714,8 +763,15 @@ function exportTXT($book, $chapters, $is_public, $author_name) {
     
     if (!empty($book['description'])) {
         $content .= "ОПИСАНИЕ:\n";
-        // Ширина до 144 символов
-        $content .= wordwrap($book['description'], 144) . "\n\n";
+        
+        // Обрабатываем описание в зависимости от типа редактора
+        if ($book['editor_type'] == 'markdown') {
+            $descriptionText = cleanMarkdown($book['description']);
+        } else {
+            $descriptionText = strip_tags($book['description']);
+        }
+        
+        $content .= wordwrap($descriptionText, 144) . "\n\n";
     }
     
     // Оглавление
@@ -735,13 +791,17 @@ function exportTXT($book, $chapters, $is_public, $author_name) {
         $content .= $chapter['title'] . "\n";
         $content .= str_repeat("-", 60) . "\n\n";
         
-        // Получаем очищенный текст и разбиваем на абзацы
-        $cleanContent = cleanMarkdown($chapter['content']);
-        $paragraphs = markdownToParagraphs($cleanContent);
+        // Получаем очищенный текст в зависимости от типа редактора
+        if ($book['editor_type'] == 'markdown') {
+            $cleanContent = cleanMarkdown($chapter['content']);
+            $paragraphs = markdownToParagraphs($cleanContent);
+        } else {
+            $cleanContent = strip_tags($chapter['content']);
+            $paragraphs = htmlToPlainTextParagraphs($cleanContent);
+        }
         
         foreach ($paragraphs as $paragraph) {
             if (!empty(trim($paragraph))) {
-                // Увеличиваем ширину до 144 символов
                 $content .= wordwrap($paragraph, 144) . "\n\n";
             }
         }
@@ -761,5 +821,49 @@ function exportTXT($book, $chapters, $is_public, $author_name) {
     header('Content-Disposition: attachment; filename="' . $filename . '"');
     echo $content;
     exit;
+}
+
+// Новая функция для разбивки HTML на абзацы в виде простого текста
+function htmlToPlainTextParagraphs($html) {
+    // Убираем HTML теги
+    $text = strip_tags($html);
+    
+    // Заменяем HTML entities
+    $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    
+    // Нормализуем переносы строк
+    $text = str_replace(["\r\n", "\r"], "\n", $text);
+    
+    // Разбиваем на строки
+    $lines = explode("\n", $text);
+    $paragraphs = [];
+    $currentParagraph = '';
+    
+    foreach ($lines as $line) {
+        $trimmedLine = trim($line);
+        
+        // Пустая строка - конец абзаца
+        if (empty($trimmedLine)) {
+            if (!empty($currentParagraph)) {
+                $paragraphs[] = $currentParagraph;
+                $currentParagraph = '';
+            }
+            continue;
+        }
+        
+        // Добавляем к текущему абзацу
+        if (!empty($currentParagraph)) {
+            $currentParagraph .= ' ' . $trimmedLine;
+        } else {
+            $currentParagraph = $trimmedLine;
+        }
+    }
+    
+    // Добавляем последний абзац
+    if (!empty($currentParagraph)) {
+        $paragraphs[] = $currentParagraph;
+    }
+    
+    return $paragraphs;
 }
 ?>

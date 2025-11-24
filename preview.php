@@ -7,9 +7,15 @@ $Parsedown = new ParsedownExtra();;
 
 $content = $_POST['content'] ?? '';
 $title = $_POST['title'] ?? 'Предпросмотр';
+$editor_type = $_POST['editor_type'] ?? 'markdown'; // Новое поле
 
-$Parsedown = new Parsedown();
-$html_content = $Parsedown->text($content);
+// Обрабатываем контент в зависимости от типа редактора
+if ($editor_type == 'markdown') {
+    $html_content = $Parsedown->text($content);
+} else {
+    $html_content = $content;
+}
+
 
 $page_title = "Предпросмотр: " . e($title);
 ?>

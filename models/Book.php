@@ -64,6 +64,10 @@ class Book {
         $published = isset($data['published']) ? (int)$data['published'] : 0;
         $editor_type = $data['editor_type'] ?? 'markdown';
 
+        // Преобразуем пустые строки в NULL для integer полей
+        $series_id = !empty($data['series_id']) ? (int)$data['series_id'] : null;
+        $sort_order_in_series = !empty($data['sort_order_in_series']) ? (int)$data['sort_order_in_series'] : null;
+
         $stmt = $this->pdo->prepare("
             UPDATE books
             SET title = ?, description = ?, genre = ?, series_id = ?, sort_order_in_series = ?, published = ?, editor_type = ?
@@ -73,8 +77,8 @@ class Book {
             $data['title'],
             $data['description'] ?? null,
             $data['genre'] ?? null,
-            $data['series_id'] ?? null,
-            $data['sort_order_in_series'] ?? null,
+            $series_id,  // Теперь это либо integer, либо NULL
+            $sort_order_in_series,  // Теперь это либо integer, либо NULL
             $published,
             $editor_type,
             $id,
@@ -206,45 +210,72 @@ class Book {
     }
     
     public function convertChaptersContent($book_id, $from_editor, $to_editor) {
-        try {
-            $this->pdo->beginTransaction();
+    try {
+        $this->pdo->beginTransaction();
+        
+        // Получаем все главы книги
+        $chapters = $this->getAllChapters($book_id);
+        
+        foreach ($chapters as $chapter) {
+            $converted_content = $this->convertContent(
+                $chapter['content'],
+                $from_editor,
+                $to_editor
+            );
             
-            $chapters = $this->getAllChapters($book_id);
-            
-            foreach ($chapters as $chapter) {
-                $converted_content = $this->convertContent(
-                    $chapter['content'],
-                    $from_editor,
-                    $to_editor
-                );
-                
-                $this->updateChapterContent($chapter['id'], $converted_content);
-            }
-            
-            $this->pdo->commit();
-            return true;
-        } catch (Exception $e) {
-            $this->pdo->rollBack();
-            error_log("Error converting chapters: " . $e->getMessage());
-            return false;
+            // Обновляем контент главы
+            $this->updateChapterContent($chapter['id'], $converted_content);
         }
+        
+        $this->pdo->commit();
+        return true;
+    } catch (Exception $e) {
+        $this->pdo->rollBack();
+        error_log("Error converting chapters: " . $e->getMessage());
+        return false;
     }
+}
 
-    private function getAllChapters($book_id) {
-        $stmt = $this->pdo->prepare("SELECT id, content FROM chapters WHERE book_id = ?");
-        $stmt->execute([$book_id]);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+private function getAllChapters($book_id) {
+    $stmt = $this->pdo->prepare("SELECT id, content FROM chapters WHERE book_id = ?");
+    $stmt->execute([$book_id]);
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+private function updateChapterContent($chapter_id, $content) {
+    $word_count = $this->countWords($content);
+    $stmt = $this->pdo->prepare("
+        UPDATE chapters 
+        SET content = ?, word_count = ?, updated_at = CURRENT_TIMESTAMP 
+        WHERE id = ?
+    ");
+    return $stmt->execute([$content, $word_count, $chapter_id]);
+}
+
+private function convertContent($content, $from_editor, $to_editor) {
+    if ($from_editor === $to_editor) {
+        return $content;
     }
     
-    private function updateChapterContent($chapter_id, $content) {
-        $word_count = $this->countWords($content);
-        $stmt = $this->pdo->prepare("
-            UPDATE chapters 
-            SET content = ?, word_count = ?, updated_at = CURRENT_TIMESTAMP 
-            WHERE id = ?
-        ");
-        return $stmt->execute([$content, $word_count, $chapter_id]);
+    require_once __DIR__ . '/../includes/parsedown/ParsedownExtra.php';
+    
+    try {
+        if ($from_editor === 'markdown' && $to_editor === 'html') {
+            // Markdown to HTML
+            $parsedown = new ParsedownExtra();
+            return $parsedown->text($content);
+        } elseif ($from_editor === 'html' && $to_editor === 'markdown') {
+            // HTML to Markdown (упрощенная версия)
+            return $this->htmlToMarkdown($content);
+        }
+    } catch (Exception $e) {
+        error_log("Error converting content from {$from_editor} to {$to_editor}: " . $e->getMessage());
+        return $content;
     }
+    
+    return $content;
+}
+
     
     private function countWords($text) {
         $text = strip_tags($text);
@@ -254,26 +285,7 @@ class Book {
         return count($words);
     }
     
-    private function convertContent($content, $from_editor, $to_editor) {
-        if ($from_editor === $to_editor) {
-            return $content;
-        }
-        
-        try {
-            if ($from_editor === 'markdown' && $to_editor === 'html') {
-                // Markdown to HTML с улучшенной обработкой абзацев
-                return $this->markdownToHtmlWithParagraphs($content);
-            } elseif ($from_editor === 'html' && $to_editor === 'markdown') {
-                // HTML to Markdown
-                return $this->htmlToMarkdown($content);
-            }
-        } catch (Exception $e) {
-            error_log("Error converting content from {$from_editor} to {$to_editor}: " . $e->getMessage());
-            return $content;
-        }
-        
-        return $content;
-    }
+    
 
     private function markdownToHtmlWithParagraphs($markdown) {
         $parsedown = new ParsedownExtra();

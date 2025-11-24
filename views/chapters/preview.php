@@ -1,23 +1,6 @@
 <?php
-require_once 'config/config.php';
-require_login();
-
-require_once 'includes/parsedown/ParsedownExtra.php';
-$Parsedown = new ParsedownExtra();;
-
-$content = $_POST['content'] ?? '';
-$title = $_POST['title'] ?? 'Предпросмотр';
-$editor_type = $_POST['editor_type'] ?? 'markdown'; // Новое поле
-
-// Обрабатываем контент в зависимости от типа редактора
-if ($editor_type == 'markdown') {
-    $html_content = $Parsedown->text($content);
-} else {
-    $html_content = $content;
-}
-
-
-$page_title = "Предпросмотр: " . e($title);
+// views/chapters/preview.php
+include 'views/layouts/header.php';
 ?>
 <!DOCTYPE html>
 <html lang="ru">
@@ -25,7 +8,8 @@ $page_title = "Предпросмотр: " . e($title);
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= e($page_title) ?></title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1.5.10/css/pico.min.css">
+    <link rel="stylesheet" href="<?= SITE_URL ?>/assets/css/pico.min.css">
+    <link rel="stylesheet" href="<?= SITE_URL ?>/assets/css/style.css">
     <style>
         body {
             padding: 20px;
@@ -41,33 +25,33 @@ $page_title = "Предпросмотр: " . e($title);
             margin-top: 1.5em;
             margin-bottom: 0.5em;
         }
-        h1 { border-bottom: 2px solid #007bff; padding-bottom: 0.3em; }
-        h2 { border-bottom: 1px solid #eaecef; padding-bottom: 0.3em; }
+        h1 { border-bottom: 2px solid var(--primary); padding-bottom: 0.3em; }
+        h2 { border-bottom: 1px solid var(--border-color); padding-bottom: 0.3em; }
         p {
             margin-bottom: 1em;
         }
         code {
-            background: #f5f5f5;
+            background: var(--card-background-color);
             padding: 2px 4px;
             border-radius: 3px;
             font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
         }
         pre {
-            background: #f5f5f5;
+            background: var(--card-background-color);
             padding: 1rem;
             border-radius: 5px;
             overflow-x: auto;
-            border-left: 4px solid #007bff;
+            border-left: 4px solid var(--primary);
         }
         pre code {
             background: none;
             padding: 0;
         }
         blockquote {
-            border-left: 4px solid #ddd;
+            border-left: 4px solid var(--border-color);
             padding-left: 1rem;
             margin-left: 0;
-            color: #666;
+            color: var(--muted-color);
             font-style: italic;
         }
         strong { font-weight: bold; }
@@ -84,14 +68,14 @@ $page_title = "Предпросмотр: " . e($title);
             margin: 1rem 0;
         }
         table, th, td {
-            border: 1px solid #ddd;
+            border: 1px solid var(--border-color);
         }
         th, td {
             padding: 8px 12px;
             text-align: left;
         }
         th {
-            background: #f5f5f5;
+            background: var(--card-background-color);
         }
     </style>
 </head>
@@ -102,11 +86,14 @@ $page_title = "Предпросмотр: " . e($title);
     </header>
     
     <main class="content">
-        <?= $html_content ?>
+        <?= $content ?>
     </main>
     
-    <footer style="margin-top: 3rem; padding-top: 1rem; border-top: 1px solid #ddd;">
+    <footer style="margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--border-color);">
         <small>Сгенерировано <?= date('d.m.Y H:i') ?> | Markdown Preview</small>
+        <br>
+        <a href="javascript:window.close()" class="button secondary">Закрыть</a>
+        <a href="javascript:window.print()" class="button">Печать</a>
     </footer>
 </body>
 </html>

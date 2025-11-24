@@ -363,14 +363,20 @@ private function convertContent($content, $from_editor, $to_editor) {
         // Базовая конвертация HTML в Markdown
         $markdown = $html;
         
-        // Обрабатываем абзацы - заменяем на двойные переносы строк
-        $markdown = preg_replace('/<p[^>]*>(.*?)<\/p>/is', "$1\n\n", $markdown);
+        // 1. Сначала обрабатываем абзацы - заменяем на двойные переносы строк
+        $markdown = preg_replace_callback('/<p[^>]*>(.*?)<\/p>/is', function($matches) {
+            $content = trim($matches[1]);
+            if (!empty($content)) {
+                return $content . "\n\n";
+            }
+            return '';
+        }, $markdown);
         
-        // Обрабатываем разрывы строк
+        // 2. Обрабатываем разрывы строк
         $markdown = preg_replace('/<br[^>]*>\s*<\/br[^>]*>/i', "\n", $markdown);
         $markdown = preg_replace('/<br[^>]*>/i', "  \n", $markdown); // Два пробела для Markdown разрыва
         
-        // Заголовки
+        // 3. Заголовки
         $markdown = preg_replace('/<h1[^>]*>(.*?)<\/h1>/is', "# $1\n\n", $markdown);
         $markdown = preg_replace('/<h2[^>]*>(.*?)<\/h2>/is', "## $1\n\n", $markdown);
         $markdown = preg_replace('/<h3[^>]*>(.*?)<\/h3>/is', "### $1\n\n", $markdown);
@@ -378,49 +384,95 @@ private function convertContent($content, $from_editor, $to_editor) {
         $markdown = preg_replace('/<h5[^>]*>(.*?)<\/h5>/is', "##### $1\n\n", $markdown);
         $markdown = preg_replace('/<h6[^>]*>(.*?)<\/h6>/is', "###### $1\n\n", $markdown);
         
-        // Жирный текст
+        // 4. Жирный текст
         $markdown = preg_replace('/<strong[^>]*>(.*?)<\/strong>/is', '**$1**', $markdown);
         $markdown = preg_replace('/<b[^>]*>(.*?)<\/b>/is', '**$1**', $markdown);
         
-        // Курсив
+        // 5. Курсив
         $markdown = preg_replace('/<em[^>]*>(.*?)<\/em>/is', '*$1*', $markdown);
         $markdown = preg_replace('/<i[^>]*>(.*?)<\/i>/is', '*$1*', $markdown);
         
-        // Подчеркивание (не стандартно в Markdown, но обрабатываем)
-        $markdown = preg_replace('/<u[^>]*>(.*?)<\/u>/is', '<u>$1</u>', $markdown);
-        
-        // Зачеркивание
+        // 6. Зачеркивание
         $markdown = preg_replace('/<s[^>]*>(.*?)<\/s>/is', '~~$1~~', $markdown);
         $markdown = preg_replace('/<strike[^>]*>(.*?)<\/strike>/is', '~~$1~~', $markdown);
         $markdown = preg_replace('/<del[^>]*>(.*?)<\/del>/is', '~~$1~~', $markdown);
         
-        // Списки
-        $markdown = preg_replace('/<li[^>]*>(.*?)<\/li>/is', '- $1', $markdown);
-        $markdown = preg_replace('/<ul[^>]*>(.*?)<\/ul>/is', "$1\n", $markdown);
-        $markdown = preg_replace('/<ol[^>]*>(.*?)<\/ol>/is', "$1\n", $markdown);
+        // 7. Списки
+        $markdown = preg_replace('/<li[^>]*>(.*?)<\/li>/is', "- $1\n", $markdown);
         
-        // Блочные цитаты
-        $markdown = preg_replace('/<blockquote[^>]*>(.*?)<\/blockquote>/is', "> $1\n", $markdown);
+        // Обработка вложенных списков
+        $markdown = preg_replace('/<ul[^>]*>(.*?)<\/ul>/is', "\n$1\n", $markdown);
+        $markdown = preg_replace('/<ol[^>]*>(.*?)<\/ol>/is', "\n$1\n", $markdown);
         
-        // Код
+        // 8. Блочные цитаты
+        $markdown = preg_replace('/<blockquote[^>]*>(.*?)<\/blockquote>/is', "> $1\n\n", $markdown);
+        
+        // 9. Код
         $markdown = preg_replace('/<code[^>]*>(.*?)<\/code>/is', '`$1`', $markdown);
+        $markdown = preg_replace('/<pre[^>]*><code[^>]*>(.*?)<\/code><\/pre>/is', "```\n$1\n```", $markdown);
         $markdown = preg_replace('/<pre[^>]*>(.*?)<\/pre>/is', "```\n$1\n```", $markdown);
         
-        // Ссылки
+        // 10. Ссылки
         $markdown = preg_replace('/<a[^>]*href="([^"]*)"[^>]*>(.*?)<\/a>/is', '[$2]($1)', $markdown);
         
-        // Изображения
+        // 11. Изображения
         $markdown = preg_replace('/<img[^>]*src="([^"]*)"[^>]*alt="([^"]*)"[^>]*>/is', '![$2]($1)', $markdown);
         
-        // Удаляем все остальные HTML-теги
+        // 12. Таблицы
+        $markdown = preg_replace_callback('/<table[^>]*>(.*?)<\/table>/is', function($matches) {
+            $tableContent = $matches[1];
+            // Простое преобразование таблицы в Markdown
+            $tableContent = preg_replace('/<th[^>]*>(.*?)<\/th>/i', "| **$1** ", $tableContent);
+            $tableContent = preg_replace('/<td[^>]*>(.*?)<\/td>/i', "| $1 ", $tableContent);
+            $tableContent = preg_replace('/<tr[^>]*>(.*?)<\/tr>/i', "$1|\n", $tableContent);
+            $tableContent = preg_replace('/<thead[^>]*>(.*?)<\/thead>/i', "$1", $tableContent);
+            $tableContent = preg_replace('/<tbody[^>]*>(.*?)<\/tbody>/i', "$1", $tableContent);
+            
+            // Добавляем разделитель для заголовков таблицы
+            $tableContent = preg_replace('/\| \*\*[^\|]+\*\* [^\n]*?\|\n/', "$0| --- |\n", $tableContent, 1);
+            
+            return "\n" . $tableContent . "\n";
+        }, $markdown);
+        
+        // 13. Удаляем все остальные HTML-теги
         $markdown = strip_tags($markdown);
         
-        // Чистим лишние пробелы и переносы
-        $markdown = preg_replace('/\n\s*\n\s*\n/', "\n\n", $markdown);
+        // 14. Чистим лишние пробелы и переносы
+        $markdown = preg_replace('/\n{3,}/', "\n\n", $markdown); // Более двух переносов заменяем на два
         $markdown = preg_replace('/^\s+|\s+$/m', '', $markdown); // Trim каждой строки
+        $markdown = preg_replace('/\n\s*\n/', "\n\n", $markdown); // Чистим пустые строки
+        $markdown = preg_replace('/^ +/m', '', $markdown); // Убираем отступы в начале строк
+        
         $markdown = trim($markdown);
         
-        return $markdown;
+        // 15. Дополнительная нормализация - убеждаемся, что есть пустые строки между абзацами
+        $lines = explode("\n", $markdown);
+        $normalized = [];
+        $inParagraph = false;
+        
+        foreach ($lines as $line) {
+            $trimmed = trim($line);
+            
+            if (empty($trimmed)) {
+                // Пустая строка - конец абзаца
+                if ($inParagraph) {
+                    $normalized[] = '';
+                    $inParagraph = false;
+                }
+                continue;
+            }
+            
+            // Непустая строка
+            if (!$inParagraph && !empty($normalized) && end($normalized) !== '') {
+                // Добавляем пустую строку перед новым абзацем
+                $normalized[] = '';
+            }
+            
+            $normalized[] = $trimmed;
+            $inParagraph = true;
+        }
+        
+        return implode("\n", $normalized);
     }
 
     private function normalizeHtml($html) {

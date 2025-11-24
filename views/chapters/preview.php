@@ -1,7 +1,3 @@
-<?php
-// views/chapters/preview.php
-include 'views/layouts/header.php';
-?>
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -29,6 +25,7 @@ include 'views/layouts/header.php';
         h2 { border-bottom: 1px solid var(--border-color); padding-bottom: 0.3em; }
         p {
             margin-bottom: 1em;
+            text-align: justify;
         }
         code {
             background: var(--card-background-color);
@@ -46,6 +43,7 @@ include 'views/layouts/header.php';
         pre code {
             background: none;
             padding: 0;
+            display: block;
         }
         blockquote {
             border-left: 4px solid var(--border-color);
@@ -61,6 +59,7 @@ include 'views/layouts/header.php';
         .dialogue {
             margin-left: 2rem;
             font-style: italic;
+            color: #2c5aa0;
         }
         table {
             border-collapse: collapse;
@@ -77,6 +76,17 @@ include 'views/layouts/header.php';
         th {
             background: var(--card-background-color);
         }
+        ul, ol {
+            margin-bottom: 1rem;
+            padding-left: 2rem;
+        }
+        li {
+            margin-bottom: 0.3rem;
+        }
+        img {
+            max-width: 100%;
+            height: auto;
+        }
     </style>
 </head>
 <body>
@@ -84,13 +94,11 @@ include 'views/layouts/header.php';
         <h1><?= e($title) ?></h1>
         <hr>
     </header>
-    
     <main class="content">
         <?= $content ?>
     </main>
-    
     <footer style="margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--border-color);">
-        <small>Сгенерировано <?= date('d.m.Y H:i') ?> | Markdown Preview</small>
+        <small>Сгенерировано <?= date('d.m.Y H:i') ?> | Предпросмотр</small>
         <br>
         <a href="javascript:window.close()" class="button secondary">Закрыть</a>
         <a href="javascript:window.print()" class="button">Печать</a>

@@ -2,6 +2,52 @@
 // index.php - единая точка входа
 require_once 'config/config.php';
 
+// Получаем путь к запрашиваемому ресурсу
+$requestUri = $_SERVER['REQUEST_URI'];
+$requestPath = parse_url($requestUri, PHP_URL_PATH);
+
+// Убираем базовый URL (SITE_URL) из пути
+$basePath = parse_url(SITE_URL, PHP_URL_PATH) ?? '';
+if ($basePath && strpos($requestPath, $basePath) === 0) {
+    $requestPath = substr($requestPath, strlen($basePath));
+}
+
+// Убираем ведущий слеш
+$requestPath = ltrim($requestPath, '/');
+
+// Проверяем, существует ли запрашиваемый файл
+$physicalPath = __DIR__ . '/' . $requestPath;
+if (file_exists($physicalPath) && !is_dir($physicalPath) && !str_contains($physicalPath, '..')) {
+    // Определяем MIME-тип
+    $mimeTypes = [
+        'css' => 'text/css',
+        'js' => 'application/javascript',
+        'png' => 'image/png',
+        'jpg' => 'image/jpeg',
+        'jpeg' => 'image/jpeg',
+        'gif' => 'image/gif',
+        'webp' => 'image/webp',
+        'svg' => 'image/svg+xml',
+        'ico' => 'image/x-icon',
+        'json' => 'application/json',
+        'woff' => 'font/woff',
+        'woff2' => 'font/woff2',
+        'ttf' => 'font/ttf',
+        'eot' => 'application/vnd.ms-fontobject',
+    ];
+    
+    $extension = strtolower(pathinfo($physicalPath, PATHINFO_EXTENSION));
+    if (isset($mimeTypes[$extension])) {
+        header('Content-Type: ' . $mimeTypes[$extension]);
+    }
+    
+    // Запрещаем кэширование для разработки, в продакшене можно увеличить время
+    header('Cache-Control: public, max-age=3600');
+    
+    // Отправляем файл
+    readfile($physicalPath);
+    exit;
+}
 // Простой роутер
 class Router {
     private $routes = [];

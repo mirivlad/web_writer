@@ -8,9 +8,21 @@ document.addEventListener('DOMContentLoaded', function() {
     let originalStyles = {};
     let isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     
+
+    function normalizeContent(text) {
+        // Заменяем множественные переносы на двойные
+        text = text.replace(/\n{3,}/g, '\n\n');
+        // Убираем пустые строки в начале и конце
+        return text.trim();
+    }
+
     initEditor();
     
     function initEditor() {
+        // Нормализуем контент при загрузке
+        if (contentTextarea.value) {
+            contentTextarea.value = normalizeContent(contentTextarea.value);
+        }
         autoResize();
         contentTextarea.addEventListener('input', autoResize);
         contentTextarea.addEventListener('input', processDialogues);

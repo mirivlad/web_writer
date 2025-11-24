@@ -174,26 +174,139 @@ class ChapterController extends BaseController {
     
     public function preview() {
         $this->requireLogin();
-        
         require_once 'includes/parsedown/ParsedownExtra.php';
         $Parsedown = new ParsedownExtra();
-
+        
         $content = $_POST['content'] ?? '';
         $title = $_POST['title'] ?? 'Предпросмотр';
         $editor_type = $_POST['editor_type'] ?? 'markdown';
-
+        
         // Обрабатываем контент в зависимости от типа редактора
         if ($editor_type == 'markdown') {
-            $html_content = $Parsedown->text($content);
+            // Нормализуем Markdown перед преобразованием
+            $normalized_content = $this->normalizeMarkdownContent($content);
+            $html_content = $Parsedown->text($normalized_content);
         } else {
-            $html_content = $content;
+            // Для HTML редактора нормализуем контент
+            $normalized_content = $this->normalizeHtmlContent($content);
+            $html_content = $normalized_content;
         }
-
+        
         $this->render('chapters/preview', [
             'content' => $html_content,
             'title' => $title,
             'page_title' => "Предпросмотр: " . e($title)
         ]);
+    }
+
+    private function normalizeMarkdownContent($markdown) {
+        // Нормализация Markdown - убеждаемся, что есть пустые строки между абзацами
+        $lines = explode("\n", $markdown);
+        $normalized = [];
+        $inParagraph = false;
+        
+        foreach ($lines as $line) {
+            $trimmed = trim($line);
+            
+            if (empty($trimmed)) {
+                // Пустая строка - конец абзаца
+                if ($inParagraph) {
+                    $normalized[] = '';
+                    $inParagraph = false;
+                }
+                continue;
+            }
+            
+            // Проверяем, не является ли строка началом списка
+            if (preg_match('/^[\*\-\+] /', $line) || preg_match('/^\d+\./', $line)) {
+                if ($inParagraph) {
+                    $normalized[] = ''; // Завершаем предыдущий абзац
+                    $inParagraph = false;
+                }
+                $normalized[] = $line;
+                continue;
+            }
+            
+            // Проверяем, не является ли строка началом цитаты
+            if (preg_match('/^> /', $line) || preg_match('/^— /', $line)) {
+                if ($inParagraph) {
+                    $normalized[] = ''; // Завершаем предыдущий абзац
+                    $inParagraph = false;
+                }
+                $normalized[] = $line;
+                continue;
+            }
+            
+            // Проверяем, не является ли строка заголовком
+            if (preg_match('/^#+ /', $line)) {
+                if ($inParagraph) {
+                    $normalized[] = ''; // Завершаем предыдущий абзац
+                    $inParagraph = false;
+                }
+                $normalized[] = $line;
+                $normalized[] = ''; // Пустая строка после заголовка
+                continue;
+            }
+            
+            // Непустая строка - часть абзаца
+            if (!$inParagraph && !empty($normalized) && end($normalized) !== '') {
+                // Добавляем пустую строку перед новым абзацем
+                $normalized[] = '';
+            }
+            
+            $normalized[] = $line;
+            $inParagraph = true;
+        }
+        
+        return implode("\n", $normalized);
+    }
+
+    // И метод для нормализации HTML контента
+    private function normalizeHtmlContent($html) {
+        // Оборачиваем текст без тегов в <p>
+        if (!preg_match('/<[^>]+>/', $html) && trim($html) !== '') {
+            $lines = explode("\n", trim($html));
+            $wrapped = [];
+            $inParagraph = false;
+            
+            foreach ($lines as $line) {
+                $trimmed = trim($line);
+                
+                if (empty($trimmed)) {
+                    if ($inParagraph) {
+                        $wrapped[] = '</p>';
+                        $inParagraph = false;
+                    }
+                    continue;
+                }
+                
+                // Проверяем на начало списка
+                if (preg_match('/^[\*\-\+] /', $trimmed) || preg_match('/^\d+\./', $trimmed)) {
+                    if ($inParagraph) {
+                        $wrapped[] = '</p>';
+                        $inParagraph = false;
+                    }
+                    // Обрабатываем списки отдельно
+                    $wrapped[] = '<ul><li>' . htmlspecialchars($trimmed) . '</li></ul>';
+                    continue;
+                }
+                
+                if (!$inParagraph) {
+                    $wrapped[] = '<p>' . htmlspecialchars($trimmed);
+                    $inParagraph = true;
+                } else {
+                    $wrapped[] = htmlspecialchars($trimmed);
+                }
+            }
+            
+            if ($inParagraph) {
+                $wrapped[] = '</p>';
+            }
+            
+            return implode("\n", $wrapped);
+        }
+        
+        return $html;
     }
 }
 ?>

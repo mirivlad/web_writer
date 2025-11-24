@@ -249,6 +249,11 @@ article > header, article > footer {
     color: #111;
     background-color: #fff;
     resize: vertical;
+    /* Добавляем эти свойства для правильного отображения переносов */
+    white-space: pre-wrap;       /* Сохраняет пробелы и переносы строк, переносит текст */
+    word-wrap: break-word;       /* Переносит длинные слова */
+    overflow-wrap: break-word;   /* Альтернативное название word-wrap */
+    tab-size: 4;                 /* Размер табуляции */
 }
 
 #content:focus {

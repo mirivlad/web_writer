@@ -25,7 +25,7 @@ include 'views/layouts/header.php';
             <!-- Биография автора -->
             <?php if (!empty($user['bio'])): ?>
                 <div style="background: var(--card-background-color); padding: 1.5rem; border-radius: 8px; margin: 1rem 0; text-align: left;">
-                    <?= $Parsedown->text($user['bio']) ?>
+                    <?= e($user['bio']) ?>
                 </div>
             <?php endif; ?>
             

@@ -27,23 +27,10 @@ include 'views/layouts/header.php';
         <label for="content" style="display: block; margin-bottom: 0.5rem; font-weight: bold;">
             Содержание главы *
         </label>
-        
-        <?php if (($book['editor_type'] ?? 'markdown') == 'html'): ?>
-            <textarea id="content" name="content" class="html-editor" 
-                      placeholder="Начните писать вашу главу..." 
-                      rows="20"
-                      style="width: 100%;"><?= e($chapter['content']) ?></textarea>
-        <?php else: ?>
-            <textarea id="content" name="content" 
-                      placeholder="Начните писать вашу главу... Поддерживается Markdown разметка." 
-                      rows="20"
-                      style="width: 100%; font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace; font-size: 14px; line-height: 1.5;"><?= e($chapter['content']) ?></textarea>
+        <textarea id="content" name="content" class="writer-editor" style="display: none;">
+            <?= e($chapter['content'] ?? '') ?>
+        </textarea>
             
-            <div style="margin-top: 0.5rem; font-size: 0.9em; color: var(--muted-color);">
-                <strong>Подсказка:</strong> Используйте Markdown для форматирования. 
-                <a href="https://commonmark.org/help/" target="_blank">Справка по Markdown</a>
-            </div>
-        <?php endif; ?>
         
         <div style="margin-top: 1rem;">
             <label for="status" style="display: block; margin-bottom: 0.5rem; font-weight: bold;">
@@ -81,7 +68,7 @@ include 'views/layouts/header.php';
     <p><strong>Создана:</strong> <?= date('d.m.Y H:i', strtotime($chapter['created_at'])) ?></p>
     <p><strong>Обновлена:</strong> <?= date('d.m.Y H:i', strtotime($chapter['updated_at'])) ?></p>
 </div>
-
+<link href="/assets/css/quill_reset.css" rel="stylesheet">
 <script>
 function previewChapter() {
     const form = document.getElementById('chapter-form');
@@ -118,6 +105,6 @@ function previewChapter() {
     document.body.removeChild(tempForm);
 }
 </script>
-<script src="/assets/js/markdown-editor.js"></script>
+<script src="/assets/js/editor.js"></script>
 <script src="/assets/js/autosave.js"></script>
 <?php include 'views/layouts/footer.php'; ?>

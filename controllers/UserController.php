@@ -3,7 +3,6 @@
 require_once 'controllers/BaseController.php';
 require_once 'models/User.php';
 require_once 'models/Book.php';
-require_once 'includes/parsedown/ParsedownExtra.php';
 
 class UserController extends BaseController {
     
@@ -101,7 +100,7 @@ class UserController extends BaseController {
             $total_chapters += $book_stats['chapter_count'] ?? 0;
         }
 
-        $Parsedown = new ParsedownExtra();
+
 
         $this->render('user/view_public', [
             'user' => $user,
@@ -109,7 +108,6 @@ class UserController extends BaseController {
             'total_books' => $total_books,
             'total_words' => $total_words,
             'total_chapters' => $total_chapters,
-            'Parsedown' => $Parsedown,
             'page_title' => ($user['display_name'] ?: $user['username']) . ' — публичная страница'
         ]);
     }

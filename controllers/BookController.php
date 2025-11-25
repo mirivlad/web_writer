@@ -21,13 +21,9 @@ class BookController extends BaseController {
         $this->requireLogin();
         $seriesModel = new Series($this->pdo);
         $series = $seriesModel->findByUser($_SESSION['user_id']);
-        
-        // Возвращаем типы редакторов для выбора
-        $editor_types = [
-            'markdown' => 'Markdown редактор',
-            'html' => 'HTML редактор (TinyMCE)'
-        ];
-        
+        $error = '';
+        $cover_error = '';
+                
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!verify_csrf_token($_POST['csrf_token'] ?? '')) {
                 $_SESSION['error'] = "Ошибка безопасности";
@@ -46,25 +42,38 @@ class BookController extends BaseController {
                 'description' => trim($_POST['description'] ?? ''),
                 'genre' => trim($_POST['genre'] ?? ''),
                 'user_id' => $_SESSION['user_id'],
-                'editor_type' => $_POST['editor_type'] ?? 'markdown',
                 'series_id' => !empty($_POST['series_id']) ? (int)$_POST['series_id'] : null,
                 'sort_order_in_series' => !empty($_POST['sort_order_in_series']) ? (int)$_POST['sort_order_in_series'] : null,
                 'published' => isset($_POST['published']) ? 1 : 0
             ];
             
             if ($bookModel->create($data)) {
-                $_SESSION['success'] = "Книга успешно создана";
                 $new_book_id = $this->pdo->lastInsertId();
-                $this->redirect("/books/{$new_book_id}/edit");
+                    
+                // Обработка загрузки обложки
+                if (isset($_FILES['cover_image']) && $_FILES['cover_image']['error'] === UPLOAD_ERR_OK) {
+                    $cover_result = handleCoverUpload($_FILES['cover_image'], $new_book_id);
+                    if ($cover_result['success']) {
+                        $bookModel->updateCover($new_book_id, $cover_result['filename']);
+                    } else {
+                        $cover_error = $cover_result['error'];
+                        // Сохраняем ошибку в сессии, чтобы показать после редиректа
+                        $_SESSION['cover_error'] = $cover_error;
+                    }
+                }
+                    
+                    $_SESSION['success'] = "Книга успешно создана" . ($cover_error ? ", но возникла ошибка с обложкой: " . $cover_error : "");
+                    $this->redirect("/books/{$new_book_id}/edit");
             } else {
                 $_SESSION['error'] = "Ошибка при создании книги";
             }
+            
         }
         
         $this->render('books/create', [
             'series' => $series,
-            'editor_types' => $editor_types,
-            'selected_editor' => 'markdown', // по умолчанию
+            'error' => $error,
+            'cover_error' => $cover_error,
             'page_title' => 'Создание новой книги'
         ]);
     }
@@ -82,11 +91,6 @@ class BookController extends BaseController {
         $seriesModel = new Series($this->pdo);
         $series = $seriesModel->findByUser($_SESSION['user_id']);
         
-        // Типы редакторов для выбора
-        $editor_types = [
-            'markdown' => 'Markdown редактор',
-            'html' => 'HTML редактор (TinyMCE)'
-        ];
         
         $error = '';
         $cover_error = '';
@@ -98,29 +102,16 @@ class BookController extends BaseController {
                 $title = trim($_POST['title'] ?? '');
                 if (empty($title)) {
                     $error = "Название книги обязательно";
-                } else {
-                    $old_editor_type = $book['editor_type'];
-                    $new_editor_type = $_POST['editor_type'] ?? 'markdown';
-                    $editor_changed = ($old_editor_type !== $new_editor_type);
-                    
+                } else {                    
                     $data = [
                         'title' => $title,
                         'description' => trim($_POST['description'] ?? ''),
                         'genre' => trim($_POST['genre'] ?? ''),
                         'user_id' => $_SESSION['user_id'],
-                        'editor_type' => $new_editor_type,
                         'series_id' => !empty($_POST['series_id']) ? (int)$_POST['series_id'] : null,
                         'sort_order_in_series' => !empty($_POST['sort_order_in_series']) ? (int)$_POST['sort_order_in_series'] : null,
                         'published' => isset($_POST['published']) ? 1 : 0
                     ];
-                    
-                    // Обработка смены редактора (прежде чем обновлять книгу)
-                    if ($editor_changed) {
-                        $conversion_success = $bookModel->convertChaptersContent($id, $old_editor_type, $new_editor_type);
-                        if (!$conversion_success) {
-                            $_SESSION['warning'] = "Внимание: не удалось автоматически сконвертировать содержание всех глав.";
-                        }
-                    }
                     
                     // Обработка обложки
                     if (isset($_FILES['cover_image']) && $_FILES['cover_image']['error'] === UPLOAD_ERR_OK) {
@@ -142,9 +133,6 @@ class BookController extends BaseController {
                     
                     if ($success) {
                         $success_message = "Книга успешно обновлена";
-                        if ($editor_changed) {
-                            $success_message .= ". Содержание глав сконвертировано в новый формат.";
-                        }
                         $_SESSION['success'] = $success_message;
                         $this->redirect("/books/{$id}/edit");
                     } else {
@@ -162,7 +150,6 @@ class BookController extends BaseController {
             'book' => $book,
             'series' => $series,
             'chapters' => $chapters,
-            'editor_types' => $editor_types,
             'error' => $error,
             'cover_error' => $cover_error,
             'page_title' => 'Редактирование книги'
@@ -193,6 +180,69 @@ class BookController extends BaseController {
         $this->redirect('/books');
     }
     
+
+    public function deleteAll() {
+        $this->requireLogin();
+        $user_id = $_SESSION['user_id'];
+        
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !verify_csrf_token($_POST['csrf_token'] ?? '')) {
+            $_SESSION['error'] = "Ошибка безопасности";
+            $this->redirect('/books');
+        }
+        
+        $bookModel = new Book($this->pdo);
+        
+        // Получаем все книги пользователя
+        $books = $bookModel->findByUser($user_id);
+        if (empty($books)) {
+            $_SESSION['info'] = "У вас нет книг для удаления";
+            $this->redirect('/books');
+        }
+        
+        try {
+            $this->pdo->beginTransaction();
+            
+            $deleted_count = 0;
+            $deleted_covers = 0;
+            
+            foreach ($books as $book) {
+                // Удаляем обложку если она есть
+                if (!empty($book['cover_image'])) {
+                    $cover_path = COVERS_PATH . $book['cover_image'];
+                    if (file_exists($cover_path) && unlink($cover_path)) {
+                        $deleted_covers++;
+                    }
+                }
+                
+                // Удаляем главы книги
+                $stmt = $this->pdo->prepare("DELETE FROM chapters WHERE book_id = ?");
+                $stmt->execute([$book['id']]);
+                
+                // Удаляем саму книгу
+                $stmt = $this->pdo->prepare("DELETE FROM books WHERE id = ? AND user_id = ?");
+                $stmt->execute([$book['id'], $user_id]);
+                
+                $deleted_count++;
+            }
+            
+            $this->pdo->commit();
+            
+            $message = "Все книги успешно удалены ($deleted_count книг";
+            if ($deleted_covers > 0) {
+                $message .= ", удалено $deleted_covers обложек";
+            }
+            $message .= ")";
+            
+            $_SESSION['success'] = $message;
+        } catch (Exception $e) {
+            $this->pdo->rollBack();
+            error_log("Ошибка при массовом удалении: " . $e->getMessage());
+            $_SESSION['error'] = "Произошла ошибка при удалении книг: " . $e->getMessage();
+        }
+        
+        $this->redirect('/books');
+    }
+    
     public function viewPublic($share_token) {
         $bookModel = new Book($this->pdo);
         $book = $bookModel->findByShareToken($share_token);
@@ -216,29 +266,6 @@ class BookController extends BaseController {
         ]);
     }
     
-    public function normalizeContent($id) {
-        $this->requireLogin();
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $_SESSION['error'] = "Неверный метод запроса";
-            $this->redirect("/books/{$id}/edit");
-        }
-        if (!verify_csrf_token($_POST['csrf_token'] ?? '')) {
-            $_SESSION['error'] = "Ошибка безопасности";
-            $this->redirect("/books/{$id}/edit");
-        }
-        $user_id = $_SESSION['user_id'];
-        $bookModel = new Book($this->pdo);
-        if (!$bookModel->userOwnsBook($id, $user_id)) {
-            $_SESSION['error'] = "У вас нет доступа к этой книге";
-            $this->redirect('/books');
-        }
-        if ($bookModel->normalizeBookContent($id)) {
-            $_SESSION['success'] = "Контент глав успешно нормализован";
-        } else {
-            $_SESSION['error'] = "Ошибка при нормализации контента";
-        }
-        $this->redirect("/books/{$id}/edit");
-    }
     
     public function regenerateToken($id) {
         $this->requireLogin();

@@ -14,7 +14,7 @@ include 'views/layouts/header.php';
             
             <?php if ($series['description']): ?>
                 <div style="background: var(--card-background-color); padding: 1rem; border-radius: 5px; margin: 1rem 0; text-align: left;">
-                    <?= $Parsedown->text($series['description']) ?>
+                    <?= e($series['description']) ?>
                 </div>
             <?php endif; ?>
             

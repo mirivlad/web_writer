@@ -3,11 +3,14 @@
 include 'views/layouts/header.php';
 ?>
 
-<h1>Мои книги</h1>
+<h1>Мои книги <small style="color: #ccc; font-size:1rem;">(Всего книг: <?= count($books) ?>)</small></h1>
 
-<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 1rem;">
-    <h2 style="margin: 0;">Всего книг: <?= count($books) ?></h2>
+
+<div style="display: flex; justify-content: right; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 1rem;">
     <a href="<?= SITE_URL ?>/books/create" class="action-button primary">➕ Новая книга</a>
+    <?php if (!empty($books)): ?>
+        <a href="#" onclick="showDeleteAllConfirmation()" class="action-button delete">🗑️ Удалить все книги</a>
+    <?php endif; ?>
 </div>
 
 <?php if (empty($books)): ?>
@@ -17,50 +20,103 @@ include 'views/layouts/header.php';
         <a href="<?= SITE_URL ?>/books/create" role="button">📖 Создать первую книгу</a>
     </article>
 <?php else: ?>
-    <div class="grid">
+    <div class="books-grid">
         <?php foreach ($books as $book): ?>
-        <article>
-            <header>
-                <h3 style="margin-bottom: 0.5rem;">
-                    <?= e($book['title']) ?>
-                    <div style="float: right; display: flex; gap: 3px;">
-                        <a href="<?= SITE_URL ?>/books/<?= $book['id'] ?>/edit" class="compact-button secondary" title="Редактировать книгу">
-                            ✏️
+            <article class="book-card">
+                <!-- Обложка книги -->
+                <div class="book-cover-container">
+                    <?php if (!empty($book['cover_image'])): ?>
+                        <img src="<?= COVERS_URL . e($book['cover_image']) ?>" 
+                             alt="<?= e($book['title']) ?>" 
+                             class="book-cover"
+                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                        <div class="cover-placeholder" style="display: none;">
+                            📚
+                        </div>
+                    <?php else: ?>
+                        <div class="cover-placeholder">
+                            📚
+                        </div>
+                    <?php endif; ?>
+                    
+                    <!-- Статус книги -->
+                    <div class="book-status <?= $book['published'] ? 'published' : 'draft' ?>">
+                        <?= $book['published'] ? '✅' : '📝' ?>
+                    </div>
+                </div>
+
+                <!-- Информация о книге -->
+                <div class="book-info">
+                    <h3 class="book-title">
+                        <a href="<?= SITE_URL ?>/books/<?= $book['id'] ?>/edit">
+                            <?= e($book['title']) ?>
                         </a>
-                        <a href="<?= SITE_URL ?>/book/<?= $book['share_token'] ?>" class="compact-button secondary" title="Просмотреть книгу" target="_blank">
-                            👁️
+                    </h3>
+                    
+                    <?php if (!empty($book['genre'])): ?>
+                        <p class="book-genre"><?= e($book['genre']) ?></p>
+                    <?php endif; ?>
+                    
+                    <?php if (!empty($book['description'])): ?>
+                        <p class="book-description">
+                            <?= e(mb_strimwidth($book['description'], 0, 120, '...')) ?>
+                        </p>
+                    <?php endif; ?>
+                    
+                    <!-- Статистика -->
+                    <div class="book-stats">
+                        <span class="stat-item">
+                            <strong><?= $book['chapter_count'] ?? 0 ?></strong> глав
+                        </span>
+                        <span class="stat-item">
+                            <strong><?= number_format($book['total_words'] ?? 0) ?></strong> слов
+                        </span>
+                    </div>
+                    
+                    <!-- Действия -->
+                    <div class="book-actions">
+                        <a href="<?= SITE_URL ?>/books/<?= $book['id'] ?>/edit" class="compact-button primary-btn">
+                            ✏️ Редактировать
+                        </a>
+                        <a href="<?= SITE_URL ?>/books/<?= $book['id'] ?>/chapters" class="compact-button secondary-btn">
+                            📑 Главы
+                        </a>
+                        <a href="<?= SITE_URL ?>/book/<?= $book['share_token'] ?>" class="compact-button secondary-btn" target="_blank">
+                            👁️ Просмотр
                         </a>
                     </div>
-                </h3>
-                <?php if ($book['genre']): ?>
-                    <p style="margin: 0; color: var(--muted-color);"><em><?= e($book['genre']) ?></em></p>
-                <?php endif; ?>
-            </header>
-            
-            <?php if ($book['description']): ?>
-                <p><?= e(mb_strimwidth($book['description'], 0, 200, '...')) ?></p>
-            <?php endif; ?>
-            
-            <footer>
-                <div>
-                    <small>
-                        Глав: <?= $book['chapter_count'] ?> | 
-                        Слов: <?= $book['total_words'] ?> | 
-                        Статус: <?= $book['published'] ? '✅ Опубликована' : '📝 Черновик' ?>
-                    </small>
                 </div>
-                <div style="margin-top: 0.5rem; display: flex; gap: 5px; flex-wrap: wrap;">
-                    <a href="<?= SITE_URL ?>/books/<?= $book['id'] ?>/chapters" class="adaptive-button secondary">
-                        📑 Главы
-                    </a>
-                    <a href="<?= SITE_URL ?>/export/<?= $book['id'] ?>" class="adaptive-button secondary" target="_blank">
-                        📄 Экспорт
-                    </a>
-                </div>
-            </footer>
-        </article>
+            </article>
         <?php endforeach; ?>
     </div>
-<?php endif; ?>
 
+    <!-- Статистика внизу -->
+    <div class="books-stats-footer">
+        <strong>Общая статистика:</strong> 
+        Книг: <?= count($books) ?> | 
+        Глав: <?= array_sum(array_column($books, 'chapter_count')) ?> | 
+        Слов: <?= number_format(array_sum(array_column($books, 'total_words'))) ?> |
+        Опубликовано: <?= count(array_filter($books, function($book) { return $book['published']; })) ?>
+    </div>
+<?php endif; ?>
+<?php if (!empty($books)): ?>
+    <script>
+    function showDeleteAllConfirmation() {
+        if (confirm('Вы уверены, что хотите удалить ВСЕ книги? Это действие также удалит все главы и обложки книг. Действие нельзя отменить!')) {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '<?= SITE_URL ?>/books/delete-all';
+            
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = 'csrf_token';
+            csrfInput.value = '<?= generate_csrf_token() ?>';
+            form.appendChild(csrfInput);
+            
+            document.body.appendChild(form);
+            form.submit();
+        }
+    }
+    </script>
+<?php endif; ?>
 <?php include 'views/layouts/footer.php'; ?>

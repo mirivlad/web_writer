@@ -3,7 +3,6 @@
 require_once 'controllers/BaseController.php';
 require_once 'models/Series.php';
 require_once 'models/Book.php';
-require_once 'includes/parsedown/ParsedownExtra.php';
 
 class SeriesController extends BaseController {
     
@@ -178,17 +177,134 @@ class SeriesController extends BaseController {
             $total_chapters += $book_stats['chapter_count'] ?? 0;
         }
 
-        $Parsedown = new ParsedownExtra();
-
         $this->render('series/view_public', [
             'series' => $series,
             'books' => $books,
             'author' => $author,
             'total_words' => $total_words,
             'total_chapters' => $total_chapters,
-            'Parsedown' => $Parsedown,
             'page_title' => $series['title'] . ' — серия книг'
         ]);
+    }
+
+    public function addBook($series_id) {
+        $this->requireLogin();
+        
+        $user_id = $_SESSION['user_id'];
+        $seriesModel = new Series($this->pdo);
+        $bookModel = new Book($this->pdo);
+
+        if (!$seriesModel->userOwnsSeries($series_id, $user_id)) {
+            $_SESSION['error'] = "У вас нет доступа к этой серии";
+            $this->redirect('/series');
+        }
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            if (!verify_csrf_token($_POST['csrf_token'] ?? '')) {
+                $_SESSION['error'] = "Ошибка безопасности";
+                $this->redirect("/series/{$series_id}/edit");
+            }
+
+            $book_id = (int)($_POST['book_id'] ?? 0);
+            $sort_order = (int)($_POST['sort_order'] ?? 0);
+
+            if (!$book_id) {
+                $_SESSION['error'] = "Выберите книгу";
+                $this->redirect("/series/{$series_id}/edit");
+            }
+
+            // Проверяем, что книга принадлежит пользователю
+            if (!$bookModel->userOwnsBook($book_id, $user_id)) {
+                $_SESSION['error'] = "У вас нет доступа к этой книге";
+                $this->redirect("/series/{$series_id}/edit");
+            }
+
+            // Добавляем книгу в серию
+            if ($bookModel->updateSeriesInfo($book_id, $series_id, $sort_order)) {
+                $_SESSION['success'] = "Книга добавлена в серию";
+            } else {
+                $_SESSION['error'] = "Ошибка при добавлении книги в серию";
+            }
+
+            $this->redirect("/series/{$series_id}/edit");
+        }
+    }
+
+    public function removeBook($series_id, $book_id) {
+        $this->requireLogin();
+        
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $_SESSION['error'] = "Неверный метод запроса";
+            $this->redirect("/series/{$series_id}/edit");
+        }
+
+        if (!verify_csrf_token($_POST['csrf_token'] ?? '')) {
+            $_SESSION['error'] = "Ошибка безопасности";
+            $this->redirect("/series/{$series_id}/edit");
+        }
+
+        $user_id = $_SESSION['user_id'];
+        $seriesModel = new Series($this->pdo);
+        $bookModel = new Book($this->pdo);
+
+        if (!$seriesModel->userOwnsSeries($series_id, $user_id)) {
+            $_SESSION['error'] = "У вас нет доступа к этой серии";
+            $this->redirect('/series');
+        }
+
+        // Проверяем, что книга принадлежит пользователю
+        if (!$bookModel->userOwnsBook($book_id, $user_id)) {
+            $_SESSION['error'] = "У вас нет доступа к этой книге";
+            $this->redirect("/series/{$series_id}/edit");
+        }
+
+        // Удаляем книгу из серии
+        if ($bookModel->removeFromSeries($book_id)) {
+            $_SESSION['success'] = "Книга удалена из серии";
+        } else {
+            $_SESSION['error'] = "Ошибка при удалении книги из серии";
+        }
+
+        $this->redirect("/series/{$series_id}/edit");
+    }
+
+    public function updateBookOrder($series_id) {
+        $this->requireLogin();
+        
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $_SESSION['error'] = "Неверный метод запроса";
+            $this->redirect("/series/{$series_id}/edit");
+        }
+
+        if (!verify_csrf_token($_POST['csrf_token'] ?? '')) {
+            $_SESSION['error'] = "Ошибка безопасности";
+            $this->redirect("/series/{$series_id}/edit");
+        }
+
+        $user_id = $_SESSION['user_id'];
+        $seriesModel = new Series($this->pdo);
+        $bookModel = new Book($this->pdo);
+
+        if (!$seriesModel->userOwnsSeries($series_id, $user_id)) {
+            $_SESSION['error'] = "У вас нет доступа к этой серии";
+            $this->redirect('/series');
+        }
+
+        $order_data = $_POST['order'] ?? [];
+        
+        if (empty($order_data)) {
+            $_SESSION['error'] = "Нет данных для обновления";
+            $this->redirect("/series/{$series_id}/edit");
+        }
+
+        // Обновляем порядок книг
+        if ($bookModel->reorderSeriesBooks($series_id, $order_data)) {
+            $_SESSION['success'] = "Порядок книг обновлен";
+        } else {
+            $_SESSION['error'] = "Ошибка при обновлении порядка книг";
+        }
+
+        $this->redirect("/series/{$series_id}/edit");
     }
 }
 ?>

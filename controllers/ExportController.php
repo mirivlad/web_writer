@@ -4,7 +4,6 @@ require_once 'controllers/BaseController.php';
 require_once 'models/Book.php';
 require_once 'models/Chapter.php';
 require_once 'vendor/autoload.php';
-require_once 'includes/parsedown/ParsedownExtra.php';
 
 use PhpOffice\PhpWord\PhpWord;
 use PhpOffice\PhpWord\IOFactory;
@@ -69,20 +68,20 @@ class ExportController extends BaseController {
     }
     
     private function handleExport($book, $chapters, $is_public, $author_name, $format) {
-        $Parsedown = new ParsedownExtra();
+
         
         switch ($format) {
             case 'pdf':
-                $this->exportPDF($book, $chapters, $is_public, $author_name, $Parsedown);
+                $this->exportPDF($book, $chapters, $is_public, $author_name);
                 break;
             case 'docx':
-                $this->exportDOCX($book, $chapters, $is_public, $author_name, $Parsedown);
+                $this->exportDOCX($book, $chapters, $is_public, $author_name);
                 break;
             case 'html':
-                $this->exportHTML($book, $chapters, $is_public, $author_name, $Parsedown);
+                $this->exportHTML($book, $chapters, $is_public, $author_name);
                 break;
             case 'txt':
-                $this->exportTXT($book, $chapters, $is_public, $author_name, $Parsedown);
+                $this->exportTXT($book, $chapters, $is_public, $author_name);
                 break;
             default:
                 $_SESSION['error'] = "Неверный формат экспорта";
@@ -94,7 +93,7 @@ class ExportController extends BaseController {
     }
     
     function exportPDF($book, $chapters, $is_public, $author_name) {
-        global $Parsedown;
+
         
         $pdf = new TCPDF(PDF_PAGE_ORIENTATION, PDF_UNIT, PDF_PAGE_FORMAT, true, 'UTF-8', false);
         
@@ -200,11 +199,9 @@ class ExportController extends BaseController {
             
             // Контент главы
             $pdf->SetFont('dejavusans', '', 11);
-            if ($book['editor_type'] == 'markdown') {
-                $htmlContent = $Parsedown->text($chapter['content']);
-            } else {
-                $htmlContent = $chapter['content'];
-            }
+
+            $htmlContent = $chapter['content'];
+
             $pdf->writeHTML($htmlContent, true, false, true, false, '');
             
             $pdf->Ln(8);
@@ -223,8 +220,7 @@ class ExportController extends BaseController {
     }
 
     function exportDOCX($book, $chapters, $is_public, $author_name) {
-        global $Parsedown;
-        
+       
         $phpWord = new PhpWord();
         
         // Стили документа
@@ -263,11 +259,8 @@ class ExportController extends BaseController {
         
         // Описание
         if (!empty($book['description'])) {
-            if ($book['editor_type'] == 'markdown') {
-                $descriptionParagraphs = $this->markdownToParagraphs($book['description']);
-            } else {
-                $descriptionParagraphs = $this->htmlToParagraphs($book['description']);
-            }
+            
+            $descriptionParagraphs = $this->htmlToParagraphs($book['description']);
             
             foreach ($descriptionParagraphs as $paragraph) {
                 if (!empty(trim($paragraph))) {
@@ -303,14 +296,11 @@ class ExportController extends BaseController {
             $section->addText($chapter['title'], ['bold' => true, 'size' => 14]);
             $section->addTextBreak(1);
             
-            // Получаем очищенный текст и разбиваем на абзацы в зависимости от типа редактора
-            if ($book['editor_type'] == 'markdown') {
-                $cleanContent = $this->cleanMarkdown($chapter['content']);
-                $paragraphs = $this->markdownToParagraphs($cleanContent);
-            } else {
-                $cleanContent = strip_tags($chapter['content']);
-                $paragraphs = $this->htmlToParagraphs($chapter['content']);
-            }
+            // Получаем очищенный текст и разбиваем на абзацы
+
+            $cleanContent = strip_tags($chapter['content']);
+            $paragraphs = $this->htmlToParagraphs($chapter['content']);
+            
             
             // Добавляем каждый абзац
             foreach ($paragraphs as $paragraph) {
@@ -342,7 +332,6 @@ class ExportController extends BaseController {
     }
     
     function exportHTML($book, $chapters, $is_public, $author_name) {
-        global $Parsedown;
         
         $html = '<!DOCTYPE html>
         <html lang="ru">
@@ -520,11 +509,7 @@ class ExportController extends BaseController {
             
             if (!empty($book['description'])) {
                 $html .= '<div class="book-description">';
-                if ($book['editor_type'] == 'markdown') {
-                    $html .= nl2br(htmlspecialchars($book['description']));
-                } else {
-                    $html .= $book['description'];
-                }
+                $html .= $book['description'];
                 $html .= '</div>';
             }
             
@@ -546,15 +531,7 @@ class ExportController extends BaseController {
             foreach ($chapters as $index => $chapter) {
                 $html .= '<div class="chapter">';
                 $html .= '<div class="chapter-title" id="chapter-' . $chapter['id'] . '" name="chapter-' . $chapter['id'] . '">' . htmlspecialchars($chapter['title']) . '</div>';
-                
-                // Обрабатываем контент в зависимости от типа редактора
-                if ($book['editor_type'] == 'markdown') {
-                    $htmlContent = $Parsedown->text($chapter['content']);
-                } else {
-                    $htmlContent = $chapter['content'];
-                }
-                
-                $html .= '<div class="chapter-content">' . $htmlContent . '</div>';
+                $html .= '<div class="chapter-content">' . $chapter['content']. '</div>';
                 $html .= '</div>';
                 
                 if ($index < count($chapters) - 1) {
@@ -589,13 +566,8 @@ class ExportController extends BaseController {
         if (!empty($book['description'])) {
             $content .= "ОПИСАНИЕ:\n";
             
-            // Обрабатываем описание в зависимости от типа редактора
-            if ($book['editor_type'] == 'markdown') {
-                $descriptionText = $this->cleanMarkdown($book['description']);
-            } else {
-                $descriptionText = strip_tags($book['description']);
-            }
-            
+            // Обрабатываем описание
+            $descriptionText = strip_tags($book['description']);
             $content .= wordwrap($descriptionText, 144) . "\n\n";
         }
         
@@ -616,14 +588,9 @@ class ExportController extends BaseController {
             $content .= $chapter['title'] . "\n";
             $content .= str_repeat("-", 60) . "\n\n";
             
-            // Получаем очищенный текст в зависимости от типа редактора
-            if ($book['editor_type'] == 'markdown') {
-                $cleanContent = $this->cleanMarkdown($chapter['content']);
-                $paragraphs = $this->markdownToParagraphs($cleanContent);
-            } else {
-                $cleanContent = strip_tags($chapter['content']);
-                $paragraphs = $this->htmlToPlainTextParagraphs($cleanContent);
-            }
+            // Получаем очищенный текст
+            $cleanContent = strip_tags($chapter['content']);
+            $paragraphs = $this->htmlToPlainTextParagraphs($cleanContent);
             
             foreach ($paragraphs as $paragraph) {
                 if (!empty(trim($paragraph))) {
@@ -648,180 +615,7 @@ class ExportController extends BaseController {
         exit;
     }
 
-
-    // Функция для преобразования Markdown в чистый текст с форматированием абзацев
-    function markdownToPlainText($markdown) {
-        // Обрабатываем диалоги (заменяем - на —)
-        $markdown = preg_replace('/^- (.+)$/m', "— $1", $markdown);
-        
-        // Убираем Markdown разметку, но сохраняем переносы строк
-        $text = $markdown;
-        
-        // Убираем заголовки
-        $text = preg_replace('/^#+\s+/m', '', $text);
-        
-        // Убираем жирный и курсив
-        $text = preg_replace('/\*\*(.*?)\*\*/', '$1', $text);
-        $text = preg_replace('/\*(.*?)\*/', '$1', $text);
-        $text = preg_replace('/__(.*?)__/', '$1', $text);
-        $text = preg_replace('/_(.*?)_/', '$1', $text);
-        
-        // Убираем зачеркивание
-        $text = preg_replace('/~~(.*?)~~/', '$1', $text);
-        
-        // Убираем код (встроенный)
-        $text = preg_replace('/`(.*?)`/', '$1', $text);
-        
-        // Убираем блоки кода (сохраняем содержимое)
-        $text = preg_replace('/```.*?\n(.*?)```/s', '$1', $text);
-        
-        // Убираем ссылки
-        $text = preg_replace('/\[(.*?)\]\(.*?\)/', '$1', $text);
-        
-        // Обрабатываем списки - заменяем маркеры на *
-        $text = preg_replace('/^[\*\-+]\s+/m', '* ', $text);
-        $text = preg_replace('/^\d+\.\s+/m', '* ', $text);
-        
-        // Обрабатываем цитаты
-        $text = preg_replace('/^>\s+/m', '', $text);
-        
-        return $text;
-    }
-    // Функция для разбивки Markdown на абзацы с сохранением структуры
-    function markdownToParagraphs($markdown) {
-        // Нормализуем переносы строк
-        $text = str_replace(["\r\n", "\r"], "\n", $markdown);
-        
-        // Обрабатываем диалоги (заменяем - на —)
-        $text = preg_replace('/^- (.+)$/m', "— $1", $text);
-        
-        // Разбиваем на строки
-        $lines = explode("\n", $text);
-        $paragraphs = [];
-        $currentParagraph = '';
-        
-        foreach ($lines as $line) {
-            $trimmedLine = trim($line);
-            
-            // Пустая строка - конец абзаца
-            if (empty($trimmedLine)) {
-                if (!empty($currentParagraph)) {
-                    $paragraphs[] = $currentParagraph;
-                    $currentParagraph = '';
-                }
-                continue;
-            }
-            
-            // Диалог (начинается с —) всегда начинает новый абзац
-            if (str_starts_with($trimmedLine, '—')) {
-                if (!empty($currentParagraph)) {
-                    $paragraphs[] = $currentParagraph;
-                }
-                $currentParagraph = $trimmedLine;
-                $paragraphs[] = $currentParagraph;
-                $currentParagraph = '';
-                continue;
-            }
-            
-            // Заголовки (начинаются с #) всегда начинают новый абзац
-            if (str_starts_with($trimmedLine, '#')) {
-                if (!empty($currentParagraph)) {
-                    $paragraphs[] = $currentParagraph;
-                }
-                $currentParagraph = preg_replace('/^#+\s+/', '', $trimmedLine);
-                $paragraphs[] = $currentParagraph;
-                $currentParagraph = '';
-                continue;
-            }
-            
-            // Обычный текст - добавляем к текущему абзацу
-            if (!empty($currentParagraph)) {
-                $currentParagraph .= ' ' . $trimmedLine;
-            } else {
-                $currentParagraph = $trimmedLine;
-            }
-        }
-        
-        // Добавляем последний абзац
-        if (!empty($currentParagraph)) {
-            $paragraphs[] = $currentParagraph;
-        }
-        
-        return $paragraphs;
-    }
-
-    // Функция для очистки Markdown разметки
-    function cleanMarkdown($markdown) {
-        $text = $markdown;
-        
-        // Убираем заголовки
-        $text = preg_replace('/^#+\s+/m', '', $text);
-        
-        // Убираем жирный и курсив
-        $text = preg_replace('/\*\*(.*?)\*\*/', '$1', $text);
-        $text = preg_replace('/\*(.*?)\*/', '$1', $text);
-        $text = preg_replace('/__(.*?)__/', '$1', $text);
-        $text = preg_replace('/_(.*?)_/', '$1', $text);
-        
-        // Убираем зачеркивание
-        $text = preg_replace('/~~(.*?)~~/', '$1', $text);
-        
-        // Убираем код
-        $text = preg_replace('/`(.*?)`/', '$1', $text);
-        $text = preg_replace('/```.*?\n(.*?)```/s', '$1', $text);
-        
-        // Убираем ссылки
-        $text = preg_replace('/\[(.*?)\]\(.*?\)/', '$1', $text);
-        
-        // Обрабатываем списки - убираем маркеры
-        $text = preg_replace('/^[\*\-+]\s+/m', '', $text);
-        $text = preg_replace('/^\d+\.\s+/m', '', $text);
-        
-        // Обрабатываем цитаты
-        $text = preg_replace('/^>\s+/m', '', $text);
-        
-        return $text;
-    }
-
-    // Функция для форматирования текста с сохранением абзацев и диалогов
-    function formatPlainText($text) {
-        $lines = explode("\n", $text);
-        $formatted = [];
-        $in_paragraph = false;
-        
-        foreach ($lines as $line) {
-            $line = trim($line);
-            
-            if (empty($line)) {
-                if ($in_paragraph) {
-                    $formatted[] = ''; // Пустая строка для разделения абзацев
-                    $in_paragraph = false;
-                }
-                continue;
-            }
-            
-            // Диалоги начинаются с —
-            if (str_starts_with($line, '—')) {
-                if ($in_paragraph) {
-                    $formatted[] = ''; // Разделяем абзацы перед диалогом
-                }
-                $formatted[] = $line;
-                $formatted[] = ''; // Пустая строка после диалога
-                $in_paragraph = false;
-            } else {
-                // Обычный текст
-                $formatted[] = $line;
-                $in_paragraph = true;
-            }
-        }
-        
-        return implode("\n", array_filter($formatted, function($line) {
-            return $line !== '' || !empty($line);
-        }));
-    }
-
-
-    // // Новая функция для разбивки HTML на абзацы
+    // Функция для разбивки HTML на абзацы
     function htmlToParagraphs($html) {
         // Убираем HTML теги и нормализуем пробелы
         $text = strip_tags($html);
@@ -837,6 +631,7 @@ class ExportController extends BaseController {
         
         return $paragraphs;
     }
+    
     function htmlToPlainTextParagraphs($html) {
         // Убираем HTML теги
         $text = strip_tags($html);

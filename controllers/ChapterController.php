@@ -3,7 +3,6 @@
 require_once 'controllers/BaseController.php';
 require_once 'models/Chapter.php';
 require_once 'models/Book.php';
-require_once 'includes/parsedown/ParsedownExtra.php';
 
 class ChapterController extends BaseController {
     
@@ -94,11 +93,29 @@ class ChapterController extends BaseController {
 
         // Проверяем права доступа к главе
         if (!$chapterModel->userOwnsChapter($id, $user_id)) {
+            if (isset($_POST['autosave']) && $_POST['autosave'] === 'true') {
+                // Для AJAX запросов возвращаем JSON
+                header('Content-Type: application/json');
+                echo json_encode(['success' => false, 'error' => 'Доступ запрещен']);
+                exit;
+            }
             $_SESSION['error'] = "У вас нет доступа к этой главе";
             $this->redirect('/books');
         }
 
         $chapter = $chapterModel->findById($id);
+        
+        // Дополнительная проверка - глава должна существовать
+        if (!$chapter) {
+            if (isset($_POST['autosave']) && $_POST['autosave'] === 'true') {
+                header('Content-Type: application/json');
+                echo json_encode(['success' => false, 'error' => 'Глава не найдена']);
+                exit;
+            }
+            $_SESSION['error'] = "Глава не найдена";
+            $this->redirect('/books');
+        }
+
         $book = $bookModel->findById($chapter['book_id']);
         $error = '';
 
@@ -119,6 +136,20 @@ class ChapterController extends BaseController {
                         'status' => $status
                     ];
 
+                    // Если это запрос автосейва, возвращаем JSON ответ
+                    if (isset($_POST['autosave']) && $_POST['autosave'] === 'true') {
+                        if ($chapterModel->update($id, $data)) {
+                            header('Content-Type: application/json');
+                            echo json_encode(['success' => true]);
+                            exit;
+                        } else {
+                            header('Content-Type: application/json');
+                            echo json_encode(['success' => false, 'error' => 'Ошибка при сохранении']);
+                            exit;
+                        }
+                    }
+
+                    // Обычный POST запрос (сохранение формы)
                     if ($chapterModel->update($id, $data)) {
                         $_SESSION['success'] = "Глава успешно обновлена";
                         $this->redirect("/books/{$chapter['book_id']}/chapters");
@@ -174,23 +205,12 @@ class ChapterController extends BaseController {
     
     public function preview() {
         $this->requireLogin();
-        require_once 'includes/parsedown/ParsedownExtra.php';
-        $Parsedown = new ParsedownExtra();
         
         $content = $_POST['content'] ?? '';
         $title = $_POST['title'] ?? 'Предпросмотр';
-        $editor_type = $_POST['editor_type'] ?? 'markdown';
         
-        // Обрабатываем контент в зависимости от типа редактора
-        if ($editor_type == 'markdown') {
-            // Нормализуем Markdown перед преобразованием
-            $normalized_content = $this->normalizeMarkdownContent($content);
-            $html_content = $Parsedown->text($normalized_content);
-        } else {
-            // Для HTML редактора нормализуем контент
-            $normalized_content = $this->normalizeHtmlContent($content);
-            $html_content = $normalized_content;
-        }
+        // Просто используем HTML как есть
+        $html_content = $content;
         
         $this->render('chapters/preview', [
             'content' => $html_content,
@@ -199,114 +219,5 @@ class ChapterController extends BaseController {
         ]);
     }
 
-    private function normalizeMarkdownContent($markdown) {
-        // Нормализация Markdown - убеждаемся, что есть пустые строки между абзацами
-        $lines = explode("\n", $markdown);
-        $normalized = [];
-        $inParagraph = false;
-        
-        foreach ($lines as $line) {
-            $trimmed = trim($line);
-            
-            if (empty($trimmed)) {
-                // Пустая строка - конец абзаца
-                if ($inParagraph) {
-                    $normalized[] = '';
-                    $inParagraph = false;
-                }
-                continue;
-            }
-            
-            // Проверяем, не является ли строка началом списка
-            if (preg_match('/^[\*\-\+] /', $line) || preg_match('/^\d+\./', $line)) {
-                if ($inParagraph) {
-                    $normalized[] = ''; // Завершаем предыдущий абзац
-                    $inParagraph = false;
-                }
-                $normalized[] = $line;
-                continue;
-            }
-            
-            // Проверяем, не является ли строка началом цитаты
-            if (preg_match('/^> /', $line) || preg_match('/^— /', $line)) {
-                if ($inParagraph) {
-                    $normalized[] = ''; // Завершаем предыдущий абзац
-                    $inParagraph = false;
-                }
-                $normalized[] = $line;
-                continue;
-            }
-            
-            // Проверяем, не является ли строка заголовком
-            if (preg_match('/^#+ /', $line)) {
-                if ($inParagraph) {
-                    $normalized[] = ''; // Завершаем предыдущий абзац
-                    $inParagraph = false;
-                }
-                $normalized[] = $line;
-                $normalized[] = ''; // Пустая строка после заголовка
-                continue;
-            }
-            
-            // Непустая строка - часть абзаца
-            if (!$inParagraph && !empty($normalized) && end($normalized) !== '') {
-                // Добавляем пустую строку перед новым абзацем
-                $normalized[] = '';
-            }
-            
-            $normalized[] = $line;
-            $inParagraph = true;
-        }
-        
-        return implode("\n", $normalized);
-    }
-
-    // И метод для нормализации HTML контента
-    private function normalizeHtmlContent($html) {
-        // Оборачиваем текст без тегов в <p>
-        if (!preg_match('/<[^>]+>/', $html) && trim($html) !== '') {
-            $lines = explode("\n", trim($html));
-            $wrapped = [];
-            $inParagraph = false;
-            
-            foreach ($lines as $line) {
-                $trimmed = trim($line);
-                
-                if (empty($trimmed)) {
-                    if ($inParagraph) {
-                        $wrapped[] = '</p>';
-                        $inParagraph = false;
-                    }
-                    continue;
-                }
-                
-                // Проверяем на начало списка
-                if (preg_match('/^[\*\-\+] /', $trimmed) || preg_match('/^\d+\./', $trimmed)) {
-                    if ($inParagraph) {
-                        $wrapped[] = '</p>';
-                        $inParagraph = false;
-                    }
-                    // Обрабатываем списки отдельно
-                    $wrapped[] = '<ul><li>' . htmlspecialchars($trimmed) . '</li></ul>';
-                    continue;
-                }
-                
-                if (!$inParagraph) {
-                    $wrapped[] = '<p>' . htmlspecialchars($trimmed);
-                    $inParagraph = true;
-                } else {
-                    $wrapped[] = htmlspecialchars($trimmed);
-                }
-            }
-            
-            if ($inParagraph) {
-                $wrapped[] = '</p>';
-            }
-            
-            return implode("\n", $wrapped);
-        }
-        
-        return $html;
-    }
 }
 ?>

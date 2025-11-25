@@ -24,6 +24,23 @@ class BaseController {
         }
     }
     
+    protected function requireAdmin() {
+        if (!is_logged_in()) {
+            $this->redirect('/login');
+            return;
+        }
+        
+        global $pdo;
+        $userModel = new User($pdo);
+        $user = $userModel->findById($_SESSION['user_id']);
+        
+        if (!$user || $user['id'] != 1) { // Предполагаем, что администратор имеет ID = 1
+            $_SESSION['error'] = "У вас нет прав администратора";
+            $this->redirect('/dashboard');
+            exit;
+        }
+    }
+
     protected function jsonResponse($data) {
         header('Content-Type: application/json');
         echo json_encode($data);

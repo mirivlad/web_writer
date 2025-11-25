@@ -2,6 +2,12 @@
 // views/books/edit.php
 include 'views/layouts/header.php';
 ?>
+<?php if (isset($_SESSION['cover_error'])): ?>
+    <div class="alert alert-error">
+        Ошибка загрузки обложки: <?= e($_SESSION['cover_error']) ?>
+        <?php unset($_SESSION['cover_error']); ?>
+    </div>
+<?php endif; ?>
 <h1>Редактирование книги</h1>
 <form method="post" enctype="multipart/form-data">
     <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
@@ -21,19 +27,6 @@ include 'views/layouts/header.php';
                value="<?= e($book['genre'] ?? '') ?>" 
                placeholder="Например: Фантастика, Роман, Детектив..."
                style="width: 100%; margin-bottom: 1.5rem;">
-        <label for="editor_type" style="display: block; margin-bottom: 0.5rem; font-weight: bold;">
-            Режим редактора
-        </label>
-        <select id="editor_type" name="editor_type" style="width: 100%; margin-bottom: 1.5rem;" onchange="showEditorWarning(this)">
-            <?php foreach ($editor_types as $type => $label): ?>
-                <option value="<?= e($type) ?>" <?= ($book['editor_type'] ?? 'markdown') == $type ? 'selected' : '' ?>>
-                    <?= e($label) ?>
-                </option>
-            <?php endforeach; ?>
-        </select>
-        <div id="editor_warning" style="display: none; background: #fff3cd; border: 1px solid #ffeaa7; padding: 10px; border-radius: 4px; margin-bottom: 1rem;">
-            <strong>Внимание:</strong> При смене редактора содержимое всех глав будет автоматически сконвертировано в новый формат.
-        </div>
         <label for="series_id" style="display: block; margin-bottom: 0.5rem; font-weight: bold;">
             Серия
         </label>
@@ -111,15 +104,6 @@ include 'views/layouts/header.php';
 </form>
 
 <?php if ($book): ?>
-    <div style="margin-top: 2rem;">
-        <form method="post" action="<?= SITE_URL ?>/books/<?= $book['id'] ?>/normalize" onsubmit="return confirm('Нормализовать контент всех глав книги? Это действие нельзя отменить.')">
-            <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
-            <button type="submit" class="button secondary">🔄 Нормализовать контент глав</button>
-            <p style="margin-top: 0.5rem; font-size: 0.8em; color: var(--muted-color);">
-                Если контент глав отображается неправильно после смены редактора, можно нормализовать его структуру.
-            </p>
-        </form>
-    </div>
     <div style="margin-top: 2rem; padding: 1rem; background: var(--card-background-color); border-radius: 5px;">
         <h3>Публичная ссылка для чтения</h3>
         <div style="display: flex; gap: 5px; align-items: center; flex-wrap: wrap;">
@@ -224,22 +208,9 @@ include 'views/layouts/header.php';
 <?php endif; ?>
 
 <script>
-function showEditorWarning(select) {
-    const warning = document.getElementById('editor_warning');
-    const currentEditor = '<?= $book['editor_type'] ?? 'markdown' ?>';
-    if (select.value !== currentEditor) {
-        warning.style.display = 'block';
-    } else {
-        warning.style.display = 'none';
-    }
-}
+
 
 document.addEventListener('DOMContentLoaded', function() {
-    const currentEditor = '<?= $book['editor_type'] ?? 'markdown' ?>';
-    const selectedEditor = document.getElementById('editor_type').value;
-    if (currentEditor !== selectedEditor) {
-        document.getElementById('editor_warning').style.display = 'block';
-    }
     
     // Копирование ссылки для чтения
     window.copyShareLink = function() {

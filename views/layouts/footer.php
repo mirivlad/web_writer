@@ -11,7 +11,7 @@
             <?php endif; ?>
         </small>
     </footer>
-
+    
     <script>
     // Глобальные функции JavaScript
     function confirmAction(message) {
@@ -25,24 +25,6 @@
             console.error('Ошибка копирования: ', err);
         });
     }
-
-    // Инициализация TinyMCE если есть текстовые редакторы
-    document.addEventListener('DOMContentLoaded', function() {
-        const htmlEditors = document.querySelectorAll('.html-editor');
-        htmlEditors.forEach(function(editor) {
-            if (typeof tinymce !== 'undefined') {
-                tinymce.init({
-                    selector: '#' + editor.id,
-                    plugins: 'advlist autolink lists link image charmap preview anchor',
-                    toolbar: 'undo redo | formatselect | bold italic | alignleft aligncenter alignright | bullist numlist outdent indent | link image',
-                    language: 'ru',
-                    height: 400,
-                    menubar: false,
-                    statusbar: false
-                });
-            }
-        });
-    });
     </script>
 </body>
 </html>

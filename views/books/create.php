@@ -3,6 +3,23 @@
 include 'views/layouts/header.php';
 ?>
 <h1>Создание новой книги</h1>
+<?php if (isset($_SESSION['error'])): ?>
+    <div class="alert alert-error">
+        <?= e($_SESSION['error']) ?>
+        <?php unset($_SESSION['error']); ?>
+    </div>
+<?php endif; ?>
+
+<?php if (isset($error) && $error): ?>
+    <div class="alert alert-error">
+        <?= e($error) ?>
+    </div>
+<?php endif; ?>
+<?php if (isset($cover_error) && $cover_error): ?>
+    <div class="alert alert-error">
+        Ошибка загрузки обложки: <?= e($cover_error) ?>
+    </div>
+<?php endif; ?>
 <form method="post" enctype="multipart/form-data">
     <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
     <div style="max-width: 100%; margin-bottom: 0.5rem;">
@@ -21,13 +38,7 @@ include 'views/layouts/header.php';
                value="<?= e($_POST['genre'] ?? '') ?>" 
                placeholder="Например: Фантастика, Роман, Детектив..."
                style="width: 100%; margin-bottom: 1.5rem;">
-        <label for="editor_type" style="display: block; margin-bottom: 0.5rem; font-weight: bold;">
-            Режим редактора
-        </label>
-        <select id="editor_type" name="editor_type" style="width: 100%; margin-bottom: 1.5rem;">
-            <option value="markdown" <?= ($_POST['editor_type'] ?? 'markdown') == 'markdown' ? 'selected' : '' ?>>Markdown редактор</option>
-            <option value="html" <?= ($_POST['editor_type'] ?? '') == 'html' ? 'selected' : '' ?>>HTML редактор (TinyMCE)</option>
-        </select>
+
         <label for="series_id" style="display: block; margin-bottom: 0.5rem; font-weight: bold;">
             Серия
         </label>
@@ -46,6 +57,16 @@ include 'views/layouts/header.php';
                   placeholder="Краткое описание сюжета или аннотация..." 
                   rows="6"
                   style="width: 100;"><?= e($_POST['description'] ?? '') ?></textarea>
+        <div style="margin-bottom: 1rem;">
+            <label for="cover_image" style="display: block; margin-bottom: 0.5rem; font-weight: bold;">
+                Обложка книги
+            </label>
+            <input type="file" id="cover_image" name="cover_image" 
+                accept="image/jpeg,image/png,image/gif,image/webp">
+            <small style="color: var(--muted-color);">
+                Разрешены форматы: JPG, PNG, GIF, WebP. Максимальный размер: 5MB.
+            </small>
+        </div>
         <div style="margin-top: 1rem;">
             <label for="published">
                 <input type="checkbox" id="published" name="published" value="1"

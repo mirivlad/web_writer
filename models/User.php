@@ -66,15 +66,15 @@ class User {
         $stmt = $this->pdo->prepare($sql);
         return $stmt->execute($params);
     }
+
+    public function delete($id) {
+        $stmt = $this->pdo->prepare("DELETE FROM users WHERE id = ?");
+        return $stmt->execute([$id]);
+    }    
     
     public function updateStatus($id, $is_active) {
         $stmt = $this->pdo->prepare("UPDATE users SET is_active = ? WHERE id = ?");
         return $stmt->execute([$is_active, $id]);
-    }
-    
-    public function delete($id) {
-        $stmt = $this->pdo->prepare("DELETE FROM users WHERE id = ?");
-        return $stmt->execute([$id]);
     }
     
     public function updateLastLogin($id) {

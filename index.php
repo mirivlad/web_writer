@@ -122,6 +122,7 @@ $router->add('/books', 'BookController@index');
 $router->add('/books/create', 'BookController@create');
 $router->add('/books/{id}/edit', 'BookController@edit');
 $router->add('/books/{id}/delete', 'BookController@delete');
+$router->add('/books/delete-all', 'BookController@deleteAll');
 $router->add('/books/{id}/normalize', 'BookController@normalizeContent');
 $router->add('/books/{id}/regenerate-token', 'BookController@regenerateToken');
 
@@ -137,7 +138,9 @@ $router->add('/series', 'SeriesController@index');
 $router->add('/series/create', 'SeriesController@create');
 $router->add('/series/{id}/edit', 'SeriesController@edit');
 $router->add('/series/{id}/delete', 'SeriesController@delete');
-
+$router->add('/series/{id}/add-book', 'SeriesController@addBook');
+$router->add('/series/{id}/remove-book/{book_id}', 'SeriesController@removeBook');
+$router->add('/series/{id}/update-order', 'SeriesController@updateBookOrder');
 
 // Профиль
 $router->add('/profile', 'UserController@profile');
@@ -153,6 +156,14 @@ $router->add('/export/shared/{share_token}', 'ExportController@exportShared'); /
 $router->add('/book/{share_token}', 'BookController@viewPublic');
 $router->add('/author/{id}', 'UserController@viewPublic');
 $router->add('/series/{id}/view', 'SeriesController@viewPublic');
+
+
+// Администрирование
+$router->add('/admin/users', 'AdminController@users');
+$router->add('/admin/add-user', 'AdminController@addUser');
+$router->add('/admin/user/{user_id}/toggle-status', 'AdminController@toggleUserStatus');
+$router->add('/admin/user/{user_id}/delete', 'AdminController@deleteUser');
+
 
 // Обработка запроса
 $requestUri = $_SERVER['REQUEST_URI'];

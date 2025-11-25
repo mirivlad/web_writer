@@ -9,7 +9,8 @@
     <title><?= e($page_title ?? 'Web Writer') ?></title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1.5.10/css/pico.min.css">
     <link rel="stylesheet" href="<?= SITE_URL ?>/assets/css/style.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/tinymce/6.8.6/tinymce.min.js" referrerpolicy="origin"></script>
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+    <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
 </head>
 <body>
     <nav class="container-fluid">
@@ -28,6 +29,10 @@
                         </summary>
                         <ul role="listbox">
                             <li><a href="<?= SITE_URL ?>/profile">⚙️ Профиль</a></li>
+                            <li><a href="<?= SITE_URL ?>/author/<?= $_SESSION['user_id'] ?>" target="_blank">👤 Моя публичная страница</a></li>
+                            <?php if ($_SESSION['user_id'] == 1): // Проверка на администратора ?>
+                                <li><a href="<?= SITE_URL ?>/admin/users">👥 Управление пользователями</a></li>
+                            <?php endif; ?>
                             <li><a href="<?= SITE_URL ?>/logout">🚪 Выход</a></li>
                         </ul>
                     </details>

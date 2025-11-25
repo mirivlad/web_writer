@@ -61,7 +61,6 @@ CREATE TABLE `books` (
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   `share_token` varchar(32) DEFAULT NULL,
   `published` tinyint(1) NOT NULL DEFAULT 0,
-  `editor_type` ENUM('markdown', 'html') DEFAULT 'markdown',
   PRIMARY KEY (`id`),
   UNIQUE KEY `share_token` (`share_token`),
   KEY `user_id` (`user_id`),
@@ -219,6 +218,11 @@ define('SITE_URL', '{$site_url}');
 
 // Настройки приложения
 define('APP_NAME', 'Web Writer');
+
+define('CONTROLLERS_PATH', __DIR__ . '/../controllers/');
+define('VIEWS_PATH', __DIR__ . '/../views/');
+define('LAYOUTS_PATH', VIEWS_PATH . 'layouts/');
+
 define('UPLOAD_PATH', __DIR__ . '/../uploads/');
 define('COVERS_PATH', UPLOAD_PATH . 'covers/');
 define('COVERS_URL', SITE_URL . '/uploads/covers/');
@@ -241,6 +245,8 @@ try {
     error_log("DB Error: " . \$e->getMessage());
     die("Ошибка подключения к базе данных");
 }
+
+
 
 // Автозагрузка моделей
 spl_autoload_register(function (\$class_name) {

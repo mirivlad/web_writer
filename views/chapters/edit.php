@@ -27,9 +27,15 @@ include 'views/layouts/header.php';
         <label for="content" style="display: block; margin-bottom: 0.5rem; font-weight: bold;">
             Содержание главы *
         </label>
-        <textarea id="content" name="content" class="writer-editor" style="display: none;">
-            <?= e($chapter['content'] ?? '') ?>
-        </textarea>
+        <!-- Контейнер Quill -->
+        <div id="quill-editor"
+             class="writer-editor-container"
+             style="height:500px;"
+             data-content="<?= htmlspecialchars($chapter['content'] ?? '', ENT_QUOTES) ?>">
+        </div>
+
+        <!-- Скрытый textarea для формы -->
+        <textarea id="content" name="content" style="display:none;"></textarea>
             
         
         <div style="margin-top: 1rem;">

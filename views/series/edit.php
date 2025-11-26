@@ -3,10 +3,7 @@ include 'views/layouts/header.php';
 ?>
 
 <h1>Редактирование серии: <?= e($series['title']) ?></h1>
-
-<div class="grid">
-    <div>
-        <article>
+<article>
             <h2>Основная информация</h2>
             <form method="post" action="/series/<?= $series['id'] ?>/edit">
                 <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
@@ -23,18 +20,16 @@ include 'views/layouts/header.php';
                 
                 <button type="submit" class="primary-btn">Сохранить изменения</button>
             </form>
-        </article>
+</article>
+<div class="grid">
+    <div>
+        
 
         <article>
             <h2>Добавить книгу в серию</h2>
-            <?php 
-            $available_books = $bookModel->getBooksNotInSeries($_SESSION['user_id'], $series['id']);
-            ?>
-            
             <?php if (!empty($available_books)): ?>
                 <form method="post" action="/series/<?= $series['id'] ?>/add-book">
                     <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
-                    
                     <label for="book_id">
                         Выберите книгу
                         <select id="book_id" name="book_id" required>
@@ -44,17 +39,15 @@ include 'views/layouts/header.php';
                             <?php endforeach; ?>
                         </select>
                     </label>
-                    
                     <label for="sort_order">
                         Порядковый номер в серии
                         <input type="number" id="sort_order" name="sort_order" value="<?= count($books_in_series) + 1 ?>" min="1">
                     </label>
-                    
                     <button type="submit" class="secondary-btn">Добавить в серию</button>
                 </form>
             <?php else: ?>
                 <p>Все ваши книги уже добавлены в эту серию или у вас нет доступных книг.</p>
-                <a href="/books/create" class="primary-btn">Создать новую книгу</a>
+                <a href="/books/create" class="primary-btn" role="button">Создать новую книгу</a>
             <?php endif; ?>
         </article>
     </div>
@@ -76,12 +69,12 @@ include 'views/layouts/header.php';
                                         <strong><?= e($book['title']) ?></strong>
                                         <small>Порядок: <?= $book['sort_order_in_series'] ?></small>
                                     </div>
-                                    <div class="book-actions">
-                                        <a href="/books/<?= $book['id'] ?>/edit" class="compact-button">Редактировать</a>
+                                    <div class="book-actions" style="display: grid; min-width: 2rem; margin-top: 1rem;">
+                                        <a href="/books/<?= $book['id'] ?>/edit" class="compact-button" role="button" style="margin-top: 0em;">✏️</a>
                                         <form method="post" action="/series/<?= $series['id'] ?>/remove-book/<?= $book['id'] ?>" 
                                               style="display: inline;" onsubmit="return confirm('Удалить книгу из серии?')">
                                             <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
-                                            <button type="submit" class="compact-button delete-btn">Удалить</button>
+                                            <button type="submit" class="compact-button red-btn" style="margin-top: 0em;">🗑️</button>
                                         </form>
                                     </div>
                                     <input type="hidden" name="order[]" value="<?= $book['id'] ?>">
@@ -97,24 +90,6 @@ include 'views/layouts/header.php';
             <?php else: ?>
                 <p>В этой серии пока нет книг. Добавьте книги с помощью формы слева.</p>
             <?php endif; ?>
-        </article>
-
-        <article>
-            <h2>Статистика серии</h2>
-            <div class="stats-list">
-                <p><strong>Количество книг:</strong> <?= count($books_in_series) ?></p>
-                <?php
-                $total_words = 0;
-                $total_chapters = 0;
-                foreach ($books_in_series as $book) {
-                    $stats = $bookModel->getBookStats($book['id']);
-                    $total_words += $stats['total_words'] ?? 0;
-                    $total_chapters += $stats['chapter_count'] ?? 0;
-                }
-                ?>
-                <p><strong>Всего глав:</strong> <?= $total_chapters ?></p>
-                <p><strong>Всего слов:</strong> <?= $total_words ?></p>
-            </div>
         </article>
     </div>
 </div>

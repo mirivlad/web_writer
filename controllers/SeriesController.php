@@ -109,10 +109,12 @@ class SeriesController extends BaseController {
         // Получаем книги в серии
         $bookModel = new Book($this->pdo);
         $books_in_series = $bookModel->findBySeries($id);
+        $available_books = $bookModel->getBooksNotInSeries($user_id, $id);
 
         $this->render('series/edit', [
             'series' => $series,
             'books_in_series' => $books_in_series,
+            'available_books' => $available_books,
             'error' => $error,
             'page_title' => "Редактирование серии: " . e($series['title'])
         ]);

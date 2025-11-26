@@ -3,8 +3,8 @@
 include 'views/layouts/header.php';
 ?>
 
-<div class="container">
-    <article style="max-width: 800px; margin: 0 auto;">
+<div class="container" style="width:100%; margin-left: 0em; margin-right: 0em auto;">
+    <article>
         <header style="text-align: center; margin-bottom: 2rem; border-bottom: 2px solid var(--muted-border-color); padding-bottom: 1rem;">
             <!-- Аватарка автора -->
             <div style="margin-bottom: 1rem;">

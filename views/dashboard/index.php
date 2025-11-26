@@ -44,14 +44,17 @@ include 'views/layouts/header.php';
         <h2>Недавние книги</h2>
         <?php if (!empty($recent_books)): ?>
             <?php foreach ($recent_books as $book): ?>
-                <article>
-                    <h3 style="margin-bottom: 0.5rem;">
+                <article style="margin-bottom: 1em; padding-top: 0.5em;">
+                    <h3 style="margin-bottom: 0.5rem; margin-top: 0.5em;">
                         <a href="<?= SITE_URL ?>/books/<?= $book['id'] ?>/edit">
                             <?= e($book['title']) ?>
                         </a>
                     </h3>
                     <?php if ($book['genre']): ?>
-                        <p style="margin: 0; color: var(--muted-color);"><em><?= e($book['genre']) ?></em></p>
+                        <p style="margin: 0; color: var(--muted-color); font-size:small;"><em><?= e($book['genre']) ?></em></p>
+                    <?php endif; ?>
+                    <?php if ($book['description']): ?>
+                        <p style="margin: 0; color: var(--muted-color);"><?= e($book['description']) ?></p>
                     <?php endif; ?>
                     <footer>
                         <small>

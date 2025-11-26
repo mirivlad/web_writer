@@ -428,6 +428,7 @@ use TCPDF;
 class ExportController extends BaseController {
     
     public function export($book_id, $format = 'pdf') {
+        
         $this->requireLogin();
         
         $user_id = $_SESSION['user_id'];
@@ -461,7 +462,7 @@ class ExportController extends BaseController {
         }
 
         // Для публичного доступа - только опубликованные главы
-        $chapters = $bookModel->getPublishedChapters($book['id']);
+        $chapters = $chapterModel->getPublishedChapters($book['id']);
         
         // Получаем информацию об авторе
         $author_name = $this->getAuthorName($book['user_id']);
@@ -1594,6 +1595,8 @@ class BookController extends BaseController {
         $this->requireLogin();
         $seriesModel = new Series($this->pdo);
         $series = $seriesModel->findByUser($_SESSION['user_id']);
+        $error = '';
+        $cover_error = '';
                 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!verify_csrf_token($_POST['csrf_token'] ?? '')) {
@@ -1619,16 +1622,32 @@ class BookController extends BaseController {
             ];
             
             if ($bookModel->create($data)) {
-                $_SESSION['success'] = "Книга успешно создана";
                 $new_book_id = $this->pdo->lastInsertId();
-                $this->redirect("/books/{$new_book_id}/edit");
+                    
+                // Обработка загрузки обложки
+                if (isset($_FILES['cover_image']) && $_FILES['cover_image']['error'] === UPLOAD_ERR_OK) {
+                    $cover_result = handleCoverUpload($_FILES['cover_image'], $new_book_id);
+                    if ($cover_result['success']) {
+                        $bookModel->updateCover($new_book_id, $cover_result['filename']);
+                    } else {
+                        $cover_error = $cover_result['error'];
+                        // Сохраняем ошибку в сессии, чтобы показать после редиректа
+                        $_SESSION['cover_error'] = $cover_error;
+                    }
+                }
+                    
+                    $_SESSION['success'] = "Книга успешно создана" . ($cover_error ? ", но возникла ошибка с обложкой: " . $cover_error : "");
+                    $this->redirect("/books/{$new_book_id}/edit");
             } else {
                 $_SESSION['error'] = "Ошибка при создании книги";
             }
+            
         }
         
         $this->render('books/create', [
             'series' => $series,
+            'error' => $error,
+            'cover_error' => $cover_error,
             'page_title' => 'Создание новой книги'
         ]);
     }
@@ -1800,13 +1819,14 @@ class BookController extends BaseController {
     
     public function viewPublic($share_token) {
         $bookModel = new Book($this->pdo);
+        $chapterModel = new Chapter($this->pdo);
         $book = $bookModel->findByShareToken($share_token);
         if (!$book) {
             http_response_code(404);
             $this->render('errors/404');
             return;
         }
-        $chapters = $bookModel->getPublishedChapters($book['id']);
+        $chapters = $chapterModel->getPublishedChapters($book['id']);
         
         // Получаем информацию об авторе
         $stmt = $this->pdo->prepare("SELECT id, username, display_name FROM users WHERE id = ?");
@@ -1821,6 +1841,29 @@ class BookController extends BaseController {
         ]);
     }
     
+    public function viewAll($id) {
+        $bookModel = new Book($this->pdo);
+        $chapterModel = new Chapter($this->pdo);
+        $book = $bookModel->findById($id);
+        if (!$book) {
+            http_response_code(404);
+            $this->render('errors/404');
+            return;
+        }
+        $chapters = $chapterModel->findByBook($book['id']);
+        
+        // Получаем информацию об авторе
+        $stmt = $this->pdo->prepare("SELECT id, username, display_name FROM users WHERE id = ?");
+        $stmt->execute([$book['user_id']]);
+        $author = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        $this->render('books/view_public', [
+            'book' => $book,
+            'chapters' => $chapters,
+            'author' => $author,
+            'page_title' => $book['title']
+        ]);
+    }
     
     public function regenerateToken($id) {
         $this->requireLogin();
@@ -2096,6 +2139,33 @@ class Chapter {
         $stmt->execute([$chapter_id, $user_id]);
         return $stmt->fetch() !== false;
     }
+
+        
+    public function getPublishedChapters($book_id) {
+        $stmt = $this->pdo->prepare("
+            SELECT * FROM chapters 
+            WHERE book_id = ? AND status = 'published' 
+            ORDER BY sort_order, created_at
+        ");
+        $stmt->execute([$book_id]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    // private function getAllChapters($book_id) {
+    //     $stmt = $this->pdo->prepare("SELECT id, content FROM chapters WHERE book_id = ?");
+    //     $stmt->execute([$book_id]);
+    //     return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    // }
+
+    // private function updateChapterContent($chapter_id, $content) {
+    //     $word_count = $this->countWords($content);
+    //     $stmt = $this->pdo->prepare("
+    //         UPDATE chapters 
+    //         SET content = ?, word_count = ?, updated_at = CURRENT_TIMESTAMP 
+    //         WHERE id = ?
+    //     ");
+    //     return $stmt->execute([$content, $word_count, $chapter_id]);
+    // }
 
 }
 ?>
@@ -2531,15 +2601,7 @@ class Book {
         return $success ? $new_token : false;
     }
     
-    public function getPublishedChapters($book_id) {
-        $stmt = $this->pdo->prepare("
-            SELECT * FROM chapters 
-            WHERE book_id = ? AND status = 'published' 
-            ORDER BY sort_order, created_at
-        ");
-        $stmt->execute([$book_id]);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
+
 
     public function updateCover($book_id, $filename) {
         $stmt = $this->pdo->prepare("UPDATE books SET cover_image = ? WHERE id = ?");
@@ -2601,24 +2663,7 @@ class Book {
         $stmt->execute([$book_id]);
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
-    
-    
 
-    private function getAllChapters($book_id) {
-        $stmt = $this->pdo->prepare("SELECT id, content FROM chapters WHERE book_id = ?");
-        $stmt->execute([$book_id]);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
-
-    private function updateChapterContent($chapter_id, $content) {
-        $word_count = $this->countWords($content);
-        $stmt = $this->pdo->prepare("
-            UPDATE chapters 
-            SET content = ?, word_count = ?, updated_at = CURRENT_TIMESTAMP 
-            WHERE id = ?
-        ");
-        return $stmt->execute([$content, $word_count, $chapter_id]);
-    }
     
     public function getBooksNotInSeries($user_id, $series_id = null) {
         $sql = "SELECT * FROM books WHERE user_id = ? AND (series_id IS NULL OR series_id = ?)";
@@ -2777,6 +2822,7 @@ $router->add('/register', 'AuthController@register');
 
 // Книги
 $router->add('/books', 'BookController@index');
+$router->add('/book/all/{id}', 'BookController@viewAll');
 $router->add('/books/create', 'BookController@create');
 $router->add('/books/{id}/edit', 'BookController@edit');
 $router->add('/books/{id}/delete', 'BookController@delete');
@@ -3579,11 +3625,91 @@ function deleteUserAvatar($user_id) {
 Приложение распространяется под лицензией [AGPLv3](https://www.gnu.org/licenses/agpl-3.0.html).
 // ./assets/index.php
 
+// ./assets/css/quill_reset.css
+/* Увеличиваем специфичность для кнопок Quill */
+.ql-toolbar .ql-picker-label,
+.ql-toolbar button,
+.ql-toolbar [role="button"] {
+    all: unset; /* Сбрасываем все стили Pico (background, border, padding и т.д.) */
+    display: inline-block; /* Восстанавливаем базовые стили Quill */
+    cursor: pointer;
+    padding: 0; /* Quill кнопки не имеют padding */
+    margin: 0;
+    border: none;
+    background: none;
+    color: inherit; /* Наследуем цвет от Quill */
+    font-size: inherit;
+    line-height: inherit;
+    text-decoration: none; /* Убираем подчёркивание, если это <a> */
+}
+
+/* Восстанавливаем hover/active стили Quill (если они сломались) */
+.ql-toolbar button:hover,
+.ql-toolbar [role="button"]:hover {
+    color: #06c; /* Пример из Quill snow theme; адаптируйте */
+    background: none; /* Без фона */
+}
+
+.ql-toolbar button.ql-active,
+.ql-toolbar [role="button"].ql-active {
+    color: #06c;
+    background: none;
+}
+
+/* Для иконок (SVG в Quill) */
+.ql-toolbar .ql-icon {
+    fill: currentColor; /* Убедимся, что иконки наследуют цвет */
+}
+
+/* Если Quill использует <span> для кнопок */
+.ql-toolbar .ql-picker-item,
+.ql-toolbar .ql-picker-options [role="button"] {
+    all: unset;
+    cursor: pointer;
+}
+// ./assets/css/quill.snow.css
+/*!
+ * Quill Editor v2.0.3
+ * https://quilljs.com
+ * Copyright (c) 2017-2024, Slab
+ * Copyright (c) 2014, Jason Chen
+ * Copyright (c) 2013, salesforce.com
+ */
+.ql-container{box-sizing:border-box;font-family:Helvetica,Arial,sans-serif;font-size:13px;height:100%;margin:0;position:relative}.ql-container.ql-disabled .ql-tooltip{visibility:hidden}.ql-container:not(.ql-disabled) li[data-list=checked] > .ql-ui,.ql-container:not(.ql-disabled) li[data-list=unchecked] > .ql-ui{cursor:pointer}.ql-clipboard{left:-100000px;height:1px;overflow-y:hidden;position:absolute;top:50%}.ql-clipboard p{margin:0;padding:0}.ql-editor{box-sizing:border-box;counter-reset:list-0 list-1 list-2 list-3 list-4 list-5 list-6 list-7 list-8 list-9;line-height:1.42;height:100%;outline:none;overflow-y:auto;padding:12px 15px;tab-size:4;-moz-tab-size:4;text-align:left;white-space:pre-wrap;word-wrap:break-word}.ql-editor > *{cursor:text}.ql-editor p,.ql-editor ol,.ql-editor pre,.ql-editor blockquote,.ql-editor h1,.ql-editor h2,.ql-editor h3,.ql-editor h4,.ql-editor h5,.ql-editor h6{margin:0;padding:0}@supports (counter-set:none){.ql-editor p,.ql-editor h1,.ql-editor h2,.ql-editor h3,.ql-editor h4,.ql-editor h5,.ql-editor h6{counter-set:list-0 list-1 list-2 list-3 list-4 list-5 list-6 list-7 list-8 list-9}}@supports not (counter-set:none){.ql-editor p,.ql-editor h1,.ql-editor h2,.ql-editor h3,.ql-editor h4,.ql-editor h5,.ql-editor h6{counter-reset:list-0 list-1 list-2 list-3 list-4 list-5 list-6 list-7 list-8 list-9}}.ql-editor table{border-collapse:collapse}.ql-editor td{border:1px solid #000;padding:2px 5px}.ql-editor ol{padding-left:1.5em}.ql-editor li{list-style-type:none;padding-left:1.5em;position:relative}.ql-editor li > .ql-ui:before{display:inline-block;margin-left:-1.5em;margin-right:.3em;text-align:right;white-space:nowrap;width:1.2em}.ql-editor li[data-list=checked] > .ql-ui,.ql-editor li[data-list=unchecked] > .ql-ui{color:#777}.ql-editor li[data-list=bullet] > .ql-ui:before{content:'\2022'}.ql-editor li[data-list=checked] > .ql-ui:before{content:'\2611'}.ql-editor li[data-list=unchecked] > .ql-ui:before{content:'\2610'}@supports (counter-set:none){.ql-editor li[data-list]{counter-set:list-1 list-2 list-3 list-4 list-5 list-6 list-7 list-8 list-9}}@supports not (counter-set:none){.ql-editor li[data-list]{counter-reset:list-1 list-2 list-3 list-4 list-5 list-6 list-7 list-8 list-9}}.ql-editor li[data-list=ordered]{counter-increment:list-0}.ql-editor li[data-list=ordered] > .ql-ui:before{content:counter(list-0, decimal) '. '}.ql-editor li[data-list=ordered].ql-indent-1{counter-increment:list-1}.ql-editor li[data-list=ordered].ql-indent-1 > .ql-ui:before{content:counter(list-1, lower-alpha) '. '}@supports (counter-set:none){.ql-editor li[data-list].ql-indent-1{counter-set:list-2 list-3 list-4 list-5 list-6 list-7 list-8 list-9}}@supports not (counter-set:none){.ql-editor li[data-list].ql-indent-1{counter-reset:list-2 list-3 list-4 list-5 list-6 list-7 list-8 list-9}}.ql-editor li[data-list=ordered].ql-indent-2{counter-increment:list-2}.ql-editor li[data-list=ordered].ql-indent-2 > .ql-ui:before{content:counter(list-2, lower-roman) '. '}@supports (counter-set:none){.ql-editor li[data-list].ql-indent-2{counter-set:list-3 list-4 list-5 list-6 list-7 list-8 list-9}}@supports not (counter-set:none){.ql-editor li[data-list].ql-indent-2{counter-reset:list-3 list-4 list-5 list-6 list-7 list-8 list-9}}.ql-editor li[data-list=ordered].ql-indent-3{counter-increment:list-3}.ql-editor li[data-list=ordered].ql-indent-3 > .ql-ui:before{content:counter(list-3, decimal) '. '}@supports (counter-set:none){.ql-editor li[data-list].ql-indent-3{counter-set:list-4 list-5 list-6 list-7 list-8 list-9}}@supports not (counter-set:none){.ql-editor li[data-list].ql-indent-3{counter-reset:list-4 list-5 list-6 list-7 list-8 list-9}}.ql-editor li[data-list=ordered].ql-indent-4{counter-increment:list-4}.ql-editor li[data-list=ordered].ql-indent-4 > .ql-ui:before{content:counter(list-4, lower-alpha) '. '}@supports (counter-set:none){.ql-editor li[data-list].ql-indent-4{counter-set:list-5 list-6 list-7 list-8 list-9}}@supports not (counter-set:none){.ql-editor li[data-list].ql-indent-4{counter-reset:list-5 list-6 list-7 list-8 list-9}}.ql-editor li[data-list=ordered].ql-indent-5{counter-increment:list-5}.ql-editor li[data-list=ordered].ql-indent-5 > .ql-ui:before{content:counter(list-5, lower-roman) '. '}@supports (counter-set:none){.ql-editor li[data-list].ql-indent-5{counter-set:list-6 list-7 list-8 list-9}}@supports not (counter-set:none){.ql-editor li[data-list].ql-indent-5{counter-reset:list-6 list-7 list-8 list-9}}.ql-editor li[data-list=ordered].ql-indent-6{counter-increment:list-6}.ql-editor li[data-list=ordered].ql-indent-6 > .ql-ui:before{content:counter(list-6, decimal) '. '}@supports (counter-set:none){.ql-editor li[data-list].ql-indent-6{counter-set:list-7 list-8 list-9}}@supports not (counter-set:none){.ql-editor li[data-list].ql-indent-6{counter-reset:list-7 list-8 list-9}}.ql-editor li[data-list=ordered].ql-indent-7{counter-increment:list-7}.ql-editor li[data-list=ordered].ql-indent-7 > .ql-ui:before{content:counter(list-7, lower-alpha) '. '}@supports (counter-set:none){.ql-editor li[data-list].ql-indent-7{counter-set:list-8 list-9}}@supports not (counter-set:none){.ql-editor li[data-list].ql-indent-7{counter-reset:list-8 list-9}}.ql-editor li[data-list=ordered].ql-indent-8{counter-increment:list-8}.ql-editor li[data-list=ordered].ql-indent-8 > .ql-ui:before{content:counter(list-8, lower-roman) '. '}@supports (counter-set:none){.ql-editor li[data-list].ql-indent-8{counter-set:list-9}}@supports not (counter-set:none){.ql-editor li[data-list].ql-indent-8{counter-reset:list-9}}.ql-editor li[data-list=ordered].ql-indent-9{counter-increment:list-9}.ql-editor li[data-list=ordered].ql-indent-9 > .ql-ui:before{content:counter(list-9, decimal) '. '}.ql-editor .ql-indent-1:not(.ql-direction-rtl){padding-left:3em}.ql-editor li.ql-indent-1:not(.ql-direction-rtl){padding-left:4.5em}.ql-editor .ql-indent-1.ql-direction-rtl.ql-align-right{padding-right:3em}.ql-editor li.ql-indent-1.ql-direction-rtl.ql-align-right{padding-right:4.5em}.ql-editor .ql-indent-2:not(.ql-direction-rtl){padding-left:6em}.ql-editor li.ql-indent-2:not(.ql-direction-rtl){padding-left:7.5em}.ql-editor .ql-indent-2.ql-direction-rtl.ql-align-right{padding-right:6em}.ql-editor li.ql-indent-2.ql-direction-rtl.ql-align-right{padding-right:7.5em}.ql-editor .ql-indent-3:not(.ql-direction-rtl){padding-left:9em}.ql-editor li.ql-indent-3:not(.ql-direction-rtl){padding-left:10.5em}.ql-editor .ql-indent-3.ql-direction-rtl.ql-align-right{padding-right:9em}.ql-editor li.ql-indent-3.ql-direction-rtl.ql-align-right{padding-right:10.5em}.ql-editor .ql-indent-4:not(.ql-direction-rtl){padding-left:12em}.ql-editor li.ql-indent-4:not(.ql-direction-rtl){padding-left:13.5em}.ql-editor .ql-indent-4.ql-direction-rtl.ql-align-right{padding-right:12em}.ql-editor li.ql-indent-4.ql-direction-rtl.ql-align-right{padding-right:13.5em}.ql-editor .ql-indent-5:not(.ql-direction-rtl){padding-left:15em}.ql-editor li.ql-indent-5:not(.ql-direction-rtl){padding-left:16.5em}.ql-editor .ql-indent-5.ql-direction-rtl.ql-align-right{padding-right:15em}.ql-editor li.ql-indent-5.ql-direction-rtl.ql-align-right{padding-right:16.5em}.ql-editor .ql-indent-6:not(.ql-direction-rtl){padding-left:18em}.ql-editor li.ql-indent-6:not(.ql-direction-rtl){padding-left:19.5em}.ql-editor .ql-indent-6.ql-direction-rtl.ql-align-right{padding-right:18em}.ql-editor li.ql-indent-6.ql-direction-rtl.ql-align-right{padding-right:19.5em}.ql-editor .ql-indent-7:not(.ql-direction-rtl){padding-left:21em}.ql-editor li.ql-indent-7:not(.ql-direction-rtl){padding-left:22.5em}.ql-editor .ql-indent-7.ql-direction-rtl.ql-align-right{padding-right:21em}.ql-editor li.ql-indent-7.ql-direction-rtl.ql-align-right{padding-right:22.5em}.ql-editor .ql-indent-8:not(.ql-direction-rtl){padding-left:24em}.ql-editor li.ql-indent-8:not(.ql-direction-rtl){padding-left:25.5em}.ql-editor .ql-indent-8.ql-direction-rtl.ql-align-right{padding-right:24em}.ql-editor li.ql-indent-8.ql-direction-rtl.ql-align-right{padding-right:25.5em}.ql-editor .ql-indent-9:not(.ql-direction-rtl){padding-left:27em}.ql-editor li.ql-indent-9:not(.ql-direction-rtl){padding-left:28.5em}.ql-editor .ql-indent-9.ql-direction-rtl.ql-align-right{padding-right:27em}.ql-editor li.ql-indent-9.ql-direction-rtl.ql-align-right{padding-right:28.5em}.ql-editor li.ql-direction-rtl{padding-right:1.5em}.ql-editor li.ql-direction-rtl > .ql-ui:before{margin-left:.3em;margin-right:-1.5em;text-align:left}.ql-editor table{table-layout:fixed;width:100%}.ql-editor table td{outline:none}.ql-editor .ql-code-block-container{font-family:monospace}.ql-editor .ql-video{display:block;max-width:100%}.ql-editor .ql-video.ql-align-center{margin:0 auto}.ql-editor .ql-video.ql-align-right{margin:0 0 0 auto}.ql-editor .ql-bg-black{background-color:#000}.ql-editor .ql-bg-red{background-color:#e60000}.ql-editor .ql-bg-orange{background-color:#f90}.ql-editor .ql-bg-yellow{background-color:#ff0}.ql-editor .ql-bg-green{background-color:#008a00}.ql-editor .ql-bg-blue{background-color:#06c}.ql-editor .ql-bg-purple{background-color:#93f}.ql-editor .ql-color-white{color:#fff}.ql-editor .ql-color-red{color:#e60000}.ql-editor .ql-color-orange{color:#f90}.ql-editor .ql-color-yellow{color:#ff0}.ql-editor .ql-color-green{color:#008a00}.ql-editor .ql-color-blue{color:#06c}.ql-editor .ql-color-purple{color:#93f}.ql-editor .ql-font-serif{font-family:Georgia,Times New Roman,serif}.ql-editor .ql-font-monospace{font-family:Monaco,Courier New,monospace}.ql-editor .ql-size-small{font-size:.75em}.ql-editor .ql-size-large{font-size:1.5em}.ql-editor .ql-size-huge{font-size:2.5em}.ql-editor .ql-direction-rtl{direction:rtl;text-align:inherit}.ql-editor .ql-align-center{text-align:center}.ql-editor .ql-align-justify{text-align:justify}.ql-editor .ql-align-right{text-align:right}.ql-editor .ql-ui{position:absolute}.ql-editor.ql-blank::before{color:rgba(0,0,0,0.6);content:attr(data-placeholder);font-style:italic;left:15px;pointer-events:none;position:absolute;right:15px}.ql-snow.ql-toolbar:after,.ql-snow .ql-toolbar:after{clear:both;content:'';display:table}.ql-snow.ql-toolbar button,.ql-snow .ql-toolbar button{background:none;border:none;cursor:pointer;display:inline-block;float:left;height:24px;padding:3px 5px;width:28px}.ql-snow.ql-toolbar button svg,.ql-snow .ql-toolbar button svg{float:left;height:100%}.ql-snow.ql-toolbar button:active:hover,.ql-snow .ql-toolbar button:active:hover{outline:none}.ql-snow.ql-toolbar input.ql-image[type=file],.ql-snow .ql-toolbar input.ql-image[type=file]{display:none}.ql-snow.ql-toolbar button:hover,.ql-snow .ql-toolbar button:hover,.ql-snow.ql-toolbar button:focus,.ql-snow .ql-toolbar button:focus,.ql-snow.ql-toolbar button.ql-active,.ql-snow .ql-toolbar button.ql-active,.ql-snow.ql-toolbar .ql-picker-label:hover,.ql-snow .ql-toolbar .ql-picker-label:hover,.ql-snow.ql-toolbar .ql-picker-label.ql-active,.ql-snow .ql-toolbar .ql-picker-label.ql-active,.ql-snow.ql-toolbar .ql-picker-item:hover,.ql-snow .ql-toolbar .ql-picker-item:hover,.ql-snow.ql-toolbar .ql-picker-item.ql-selected,.ql-snow .ql-toolbar .ql-picker-item.ql-selected{color:#06c}.ql-snow.ql-toolbar button:hover .ql-fill,.ql-snow .ql-toolbar button:hover .ql-fill,.ql-snow.ql-toolbar button:focus .ql-fill,.ql-snow .ql-toolbar button:focus .ql-fill,.ql-snow.ql-toolbar button.ql-active .ql-fill,.ql-snow .ql-toolbar button.ql-active .ql-fill,.ql-snow.ql-toolbar .ql-picker-label:hover .ql-fill,.ql-snow .ql-toolbar .ql-picker-label:hover .ql-fill,.ql-snow.ql-toolbar .ql-picker-label.ql-active .ql-fill,.ql-snow .ql-toolbar .ql-picker-label.ql-active .ql-fill,.ql-snow.ql-toolbar .ql-picker-item:hover .ql-fill,.ql-snow .ql-toolbar .ql-picker-item:hover .ql-fill,.ql-snow.ql-toolbar .ql-picker-item.ql-selected .ql-fill,.ql-snow .ql-toolbar .ql-picker-item.ql-selected .ql-fill,.ql-snow.ql-toolbar button:hover .ql-stroke.ql-fill,.ql-snow .ql-toolbar button:hover .ql-stroke.ql-fill,.ql-snow.ql-toolbar button:focus .ql-stroke.ql-fill,.ql-snow .ql-toolbar button:focus .ql-stroke.ql-fill,.ql-snow.ql-toolbar button.ql-active .ql-stroke.ql-fill,.ql-snow .ql-toolbar button.ql-active .ql-stroke.ql-fill,.ql-snow.ql-toolbar .ql-picker-label:hover .ql-stroke.ql-fill,.ql-snow .ql-toolbar .ql-picker-label:hover .ql-stroke.ql-fill,.ql-snow.ql-toolbar .ql-picker-label.ql-active .ql-stroke.ql-fill,.ql-snow .ql-toolbar .ql-picker-label.ql-active .ql-stroke.ql-fill,.ql-snow.ql-toolbar .ql-picker-item:hover .ql-stroke.ql-fill,.ql-snow .ql-toolbar .ql-picker-item:hover .ql-stroke.ql-fill,.ql-snow.ql-toolbar .ql-picker-item.ql-selected .ql-stroke.ql-fill,.ql-snow .ql-toolbar .ql-picker-item.ql-selected .ql-stroke.ql-fill{fill:#06c}.ql-snow.ql-toolbar button:hover .ql-stroke,.ql-snow .ql-toolbar button:hover .ql-stroke,.ql-snow.ql-toolbar button:focus .ql-stroke,.ql-snow .ql-toolbar button:focus .ql-stroke,.ql-snow.ql-toolbar button.ql-active .ql-stroke,.ql-snow .ql-toolbar button.ql-active .ql-stroke,.ql-snow.ql-toolbar .ql-picker-label:hover .ql-stroke,.ql-snow .ql-toolbar .ql-picker-label:hover .ql-stroke,.ql-snow.ql-toolbar .ql-picker-label.ql-active .ql-stroke,.ql-snow .ql-toolbar .ql-picker-label.ql-active .ql-stroke,.ql-snow.ql-toolbar .ql-picker-item:hover .ql-stroke,.ql-snow .ql-toolbar .ql-picker-item:hover .ql-stroke,.ql-snow.ql-toolbar .ql-picker-item.ql-selected .ql-stroke,.ql-snow .ql-toolbar .ql-picker-item.ql-selected .ql-stroke,.ql-snow.ql-toolbar button:hover .ql-stroke-miter,.ql-snow .ql-toolbar button:hover .ql-stroke-miter,.ql-snow.ql-toolbar button:focus .ql-stroke-miter,.ql-snow .ql-toolbar button:focus .ql-stroke-miter,.ql-snow.ql-toolbar button.ql-active .ql-stroke-miter,.ql-snow .ql-toolbar button.ql-active .ql-stroke-miter,.ql-snow.ql-toolbar .ql-picker-label:hover .ql-stroke-miter,.ql-snow .ql-toolbar .ql-picker-label:hover .ql-stroke-miter,.ql-snow.ql-toolbar .ql-picker-label.ql-active .ql-stroke-miter,.ql-snow .ql-toolbar .ql-picker-label.ql-active .ql-stroke-miter,.ql-snow.ql-toolbar .ql-picker-item:hover .ql-stroke-miter,.ql-snow .ql-toolbar .ql-picker-item:hover .ql-stroke-miter,.ql-snow.ql-toolbar .ql-picker-item.ql-selected .ql-stroke-miter,.ql-snow .ql-toolbar .ql-picker-item.ql-selected .ql-stroke-miter{stroke:#06c}@media (pointer:coarse){.ql-snow.ql-toolbar button:hover:not(.ql-active),.ql-snow .ql-toolbar button:hover:not(.ql-active){color:#444}.ql-snow.ql-toolbar button:hover:not(.ql-active) .ql-fill,.ql-snow .ql-toolbar button:hover:not(.ql-active) .ql-fill,.ql-snow.ql-toolbar button:hover:not(.ql-active) .ql-stroke.ql-fill,.ql-snow .ql-toolbar button:hover:not(.ql-active) .ql-stroke.ql-fill{fill:#444}.ql-snow.ql-toolbar button:hover:not(.ql-active) .ql-stroke,.ql-snow .ql-toolbar button:hover:not(.ql-active) .ql-stroke,.ql-snow.ql-toolbar button:hover:not(.ql-active) .ql-stroke-miter,.ql-snow .ql-toolbar button:hover:not(.ql-active) .ql-stroke-miter{stroke:#444}}.ql-snow{box-sizing:border-box}.ql-snow *{box-sizing:border-box}.ql-snow .ql-hidden{display:none}.ql-snow .ql-out-bottom,.ql-snow .ql-out-top{visibility:hidden}.ql-snow .ql-tooltip{position:absolute;transform:translateY(10px)}.ql-snow .ql-tooltip a{cursor:pointer;text-decoration:none}.ql-snow .ql-tooltip.ql-flip{transform:translateY(-10px)}.ql-snow .ql-formats{display:inline-block;vertical-align:middle}.ql-snow .ql-formats:after{clear:both;content:'';display:table}.ql-snow .ql-stroke{fill:none;stroke:#444;stroke-linecap:round;stroke-linejoin:round;stroke-width:2}.ql-snow .ql-stroke-miter{fill:none;stroke:#444;stroke-miterlimit:10;stroke-width:2}.ql-snow .ql-fill,.ql-snow .ql-stroke.ql-fill{fill:#444}.ql-snow .ql-empty{fill:none}.ql-snow .ql-even{fill-rule:evenodd}.ql-snow .ql-thin,.ql-snow .ql-stroke.ql-thin{stroke-width:1}.ql-snow .ql-transparent{opacity:.4}.ql-snow .ql-direction svg:last-child{display:none}.ql-snow .ql-direction.ql-active svg:last-child{display:inline}.ql-snow .ql-direction.ql-active svg:first-child{display:none}.ql-snow .ql-editor h1{font-size:2em}.ql-snow .ql-editor h2{font-size:1.5em}.ql-snow .ql-editor h3{font-size:1.17em}.ql-snow .ql-editor h4{font-size:1em}.ql-snow .ql-editor h5{font-size:.83em}.ql-snow .ql-editor h6{font-size:.67em}.ql-snow .ql-editor a{text-decoration:underline}.ql-snow .ql-editor blockquote{border-left:4px solid #ccc;margin-bottom:5px;margin-top:5px;padding-left:16px}.ql-snow .ql-editor code,.ql-snow .ql-editor .ql-code-block-container{background-color:#f0f0f0;border-radius:3px}.ql-snow .ql-editor .ql-code-block-container{margin-bottom:5px;margin-top:5px;padding:5px 10px}.ql-snow .ql-editor code{font-size:85%;padding:2px 4px}.ql-snow .ql-editor .ql-code-block-container{background-color:#23241f;color:#f8f8f2;overflow:visible}.ql-snow .ql-editor img{max-width:100%}.ql-snow .ql-picker{color:#444;display:inline-block;float:left;font-size:14px;font-weight:500;height:24px;position:relative;vertical-align:middle}.ql-snow .ql-picker-label{cursor:pointer;display:inline-block;height:100%;padding-left:8px;padding-right:2px;position:relative;width:100%}.ql-snow .ql-picker-label::before{display:inline-block;line-height:22px}.ql-snow .ql-picker-options{background-color:#fff;display:none;min-width:100%;padding:4px 8px;position:absolute;white-space:nowrap}.ql-snow .ql-picker-options .ql-picker-item{cursor:pointer;display:block;padding-bottom:5px;padding-top:5px}.ql-snow .ql-picker.ql-expanded .ql-picker-label{color:#ccc;z-index:2}.ql-snow .ql-picker.ql-expanded .ql-picker-label .ql-fill{fill:#ccc}.ql-snow .ql-picker.ql-expanded .ql-picker-label .ql-stroke{stroke:#ccc}.ql-snow .ql-picker.ql-expanded .ql-picker-options{display:block;margin-top:-1px;top:100%;z-index:1}.ql-snow .ql-color-picker,.ql-snow .ql-icon-picker{width:28px}.ql-snow .ql-color-picker .ql-picker-label,.ql-snow .ql-icon-picker .ql-picker-label{padding:2px 4px}.ql-snow .ql-color-picker .ql-picker-label svg,.ql-snow .ql-icon-picker .ql-picker-label svg{right:4px}.ql-snow .ql-icon-picker .ql-picker-options{padding:4px 0}.ql-snow .ql-icon-picker .ql-picker-item{height:24px;width:24px;padding:2px 4px}.ql-snow .ql-color-picker .ql-picker-options{padding:3px 5px;width:152px}.ql-snow .ql-color-picker .ql-picker-item{border:1px solid transparent;float:left;height:16px;margin:2px;padding:0;width:16px}.ql-snow .ql-picker:not(.ql-color-picker):not(.ql-icon-picker) svg{position:absolute;margin-top:-9px;right:0;top:50%;width:18px}.ql-snow .ql-picker.ql-header .ql-picker-label[data-label]:not([data-label=''])::before,.ql-snow .ql-picker.ql-font .ql-picker-label[data-label]:not([data-label=''])::before,.ql-snow .ql-picker.ql-size .ql-picker-label[data-label]:not([data-label=''])::before,.ql-snow .ql-picker.ql-header .ql-picker-item[data-label]:not([data-label=''])::before,.ql-snow .ql-picker.ql-font .ql-picker-item[data-label]:not([data-label=''])::before,.ql-snow .ql-picker.ql-size .ql-picker-item[data-label]:not([data-label=''])::before{content:attr(data-label)}.ql-snow .ql-picker.ql-header{width:98px}.ql-snow .ql-picker.ql-header .ql-picker-label::before,.ql-snow .ql-picker.ql-header .ql-picker-item::before{content:'Normal'}.ql-snow .ql-picker.ql-header .ql-picker-label[data-value="1"]::before,.ql-snow .ql-picker.ql-header .ql-picker-item[data-value="1"]::before{content:'Heading 1'}.ql-snow .ql-picker.ql-header .ql-picker-label[data-value="2"]::before,.ql-snow .ql-picker.ql-header .ql-picker-item[data-value="2"]::before{content:'Heading 2'}.ql-snow .ql-picker.ql-header .ql-picker-label[data-value="3"]::before,.ql-snow .ql-picker.ql-header .ql-picker-item[data-value="3"]::before{content:'Heading 3'}.ql-snow .ql-picker.ql-header .ql-picker-label[data-value="4"]::before,.ql-snow .ql-picker.ql-header .ql-picker-item[data-value="4"]::before{content:'Heading 4'}.ql-snow .ql-picker.ql-header .ql-picker-label[data-value="5"]::before,.ql-snow .ql-picker.ql-header .ql-picker-item[data-value="5"]::before{content:'Heading 5'}.ql-snow .ql-picker.ql-header .ql-picker-label[data-value="6"]::before,.ql-snow .ql-picker.ql-header .ql-picker-item[data-value="6"]::before{content:'Heading 6'}.ql-snow .ql-picker.ql-header .ql-picker-item[data-value="1"]::before{font-size:2em}.ql-snow .ql-picker.ql-header .ql-picker-item[data-value="2"]::before{font-size:1.5em}.ql-snow .ql-picker.ql-header .ql-picker-item[data-value="3"]::before{font-size:1.17em}.ql-snow .ql-picker.ql-header .ql-picker-item[data-value="4"]::before{font-size:1em}.ql-snow .ql-picker.ql-header .ql-picker-item[data-value="5"]::before{font-size:.83em}.ql-snow .ql-picker.ql-header .ql-picker-item[data-value="6"]::before{font-size:.67em}.ql-snow .ql-picker.ql-font{width:108px}.ql-snow .ql-picker.ql-font .ql-picker-label::before,.ql-snow .ql-picker.ql-font .ql-picker-item::before{content:'Sans Serif'}.ql-snow .ql-picker.ql-font .ql-picker-label[data-value=serif]::before,.ql-snow .ql-picker.ql-font .ql-picker-item[data-value=serif]::before{content:'Serif'}.ql-snow .ql-picker.ql-font .ql-picker-label[data-value=monospace]::before,.ql-snow .ql-picker.ql-font .ql-picker-item[data-value=monospace]::before{content:'Monospace'}.ql-snow .ql-picker.ql-font .ql-picker-item[data-value=serif]::before{font-family:Georgia,Times New Roman,serif}.ql-snow .ql-picker.ql-font .ql-picker-item[data-value=monospace]::before{font-family:Monaco,Courier New,monospace}.ql-snow .ql-picker.ql-size{width:98px}.ql-snow .ql-picker.ql-size .ql-picker-label::before,.ql-snow .ql-picker.ql-size .ql-picker-item::before{content:'Normal'}.ql-snow .ql-picker.ql-size .ql-picker-label[data-value=small]::before,.ql-snow .ql-picker.ql-size .ql-picker-item[data-value=small]::before{content:'Small'}.ql-snow .ql-picker.ql-size .ql-picker-label[data-value=large]::before,.ql-snow .ql-picker.ql-size .ql-picker-item[data-value=large]::before{content:'Large'}.ql-snow .ql-picker.ql-size .ql-picker-label[data-value=huge]::before,.ql-snow .ql-picker.ql-size .ql-picker-item[data-value=huge]::before{content:'Huge'}.ql-snow .ql-picker.ql-size .ql-picker-item[data-value=small]::before{font-size:10px}.ql-snow .ql-picker.ql-size .ql-picker-item[data-value=large]::before{font-size:18px}.ql-snow .ql-picker.ql-size .ql-picker-item[data-value=huge]::before{font-size:32px}.ql-snow .ql-color-picker.ql-background .ql-picker-item{background-color:#fff}.ql-snow .ql-color-picker.ql-color .ql-picker-item{background-color:#000}.ql-code-block-container{position:relative}.ql-code-block-container .ql-ui{right:5px;top:5px}.ql-toolbar.ql-snow{border:1px solid #ccc;box-sizing:border-box;font-family:'Helvetica Neue','Helvetica','Arial',sans-serif;padding:8px}.ql-toolbar.ql-snow .ql-formats{margin-right:15px}.ql-toolbar.ql-snow .ql-picker-label{border:1px solid transparent}.ql-toolbar.ql-snow .ql-picker-options{border:1px solid transparent;box-shadow:rgba(0,0,0,0.2) 0 2px 8px}.ql-toolbar.ql-snow .ql-picker.ql-expanded .ql-picker-label{border-color:#ccc}.ql-toolbar.ql-snow .ql-picker.ql-expanded .ql-picker-options{border-color:#ccc}.ql-toolbar.ql-snow .ql-color-picker .ql-picker-item.ql-selected,.ql-toolbar.ql-snow .ql-color-picker .ql-picker-item:hover{border-color:#000}.ql-toolbar.ql-snow + .ql-container.ql-snow{border-top:0}.ql-snow .ql-tooltip{background-color:#fff;border:1px solid #ccc;box-shadow:0 0 5px #ddd;color:#444;padding:5px 12px;white-space:nowrap}.ql-snow .ql-tooltip::before{content:"Visit URL:";line-height:26px;margin-right:8px}.ql-snow .ql-tooltip input[type=text]{display:none;border:1px solid #ccc;font-size:13px;height:26px;margin:0;padding:3px 5px;width:170px}.ql-snow .ql-tooltip a.ql-preview{display:inline-block;max-width:200px;overflow-x:hidden;text-overflow:ellipsis;vertical-align:top}.ql-snow .ql-tooltip a.ql-action::after{border-right:1px solid #ccc;content:'Edit';margin-left:16px;padding-right:8px}.ql-snow .ql-tooltip a.ql-remove::before{content:'Remove';margin-left:8px}.ql-snow .ql-tooltip a{line-height:26px}.ql-snow .ql-tooltip.ql-editing a.ql-preview,.ql-snow .ql-tooltip.ql-editing a.ql-remove{display:none}.ql-snow .ql-tooltip.ql-editing input[type=text]{display:inline-block}.ql-snow .ql-tooltip.ql-editing a.ql-action::after{border-right:0;content:'Save';padding-right:0}.ql-snow .ql-tooltip[data-mode=link]::before{content:"Enter link:"}.ql-snow .ql-tooltip[data-mode=formula]::before{content:"Enter formula:"}.ql-snow .ql-tooltip[data-mode=video]::before{content:"Enter video:"}.ql-snow a{color:#06c}.ql-container.ql-snow{border:1px solid #ccc}
+
+/*# sourceMappingURL=quill.snow.css.map*/
 // ./assets/css/index.php
 
 // ./assets/css/style.css
 /* ===== БАЗОВЫЕ СТИЛИ ===== */
-/* Восстанавливаем центрирование контейнера */
+h1, h2, h3, h4, h5, h6 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  color: var(--color);
+  font-weight: var(--font-weight);
+  font-size: var(--font-size);
+  font-family: var(--font-family);
+}
+article{
+    margin-top: 0em;
+}
+article > header {
+  margin-top: calc(var(--block-spacing-vertical) * -1);
+  margin-bottom: calc(var(--block-spacing-vertical)-1);
+  border-bottom: var(--border-width) solid var(--card-border-color);
+  border-top-right-radius: var(--border-radius);
+  border-top-left-radius: var(--border-radius);
+  padding-bottom: 0.5em;
+}
+article > footer {
+  margin-top: calc(var(--block-spacing-vertical)-1);
+  margin-bottom: calc(var(--block-spacing-vertical) * -1);
+  border-top: var(--border-width) solid var(--card-border-color);
+  border-bottom-right-radius: var(--border-radius);
+  border-bottom-left-radius: var(--border-radius);
+  padding-top: 0.5em;
+}
+/* Центрирование контейнера */
 main.container {
     margin: 1rem auto;
     padding: 1rem 0;
@@ -3721,6 +3847,17 @@ main.container {
     background: var(--secondary);
     border-color: var(--secondary);
     color: var(--secondary-inverse);
+}
+.red-btn {
+    background: #ff4444;
+    border-color: #ff4444;
+    color: white;
+}
+
+.red-btn:hover {
+    background: #dd3333;
+    border-color: #dd3333;
+    color: white;
 }
 
 /* ===== КНИГИ И КОНТЕНТ ===== */
@@ -3885,35 +4022,7 @@ main.container {
     line-height: 1.6;
 }
 
-/* Переопределение Pico CSS для Quill */
-.writer-editor-container [role="button"] {
-    background: none !important;
-    background-color: transparent !important;
-    border: 1px solid transparent !important;
-    border-radius: 3px !important;
-    color: #444 !important;
-    font-family: 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif !important;
-    font-size: 14px !important;
-    font-weight: normal !important;
-    text-align: center !important;
-    text-decoration: none !important;
-    text-transform: none !important;
-    box-shadow: none !important;
-    text-shadow: none !important;
-    transition: none !important;
-    padding: 3px 5px !important;
-    margin: 2px !important;
-    width: 28px !important;
-    height: 24px !important;
-    display: inline-block !important;
-    cursor: pointer !important;
-}
 
-.writer-editor-container [role="button"]:hover {
-    background-color: #f3f3f3 !important;
-    border-color: #ccc !important;
-    color: #444 !important;
-}
 /* ===== DASHBOARD ===== */
 .dashboard-buttons {
     display: flex;
@@ -4276,334 +4385,206 @@ main.container {
         font-size: 1.1rem;
     }
 }
-// ./assets/js/autosave.js
-// assets/js/autosave.js
-document.addEventListener('DOMContentLoaded', function() {
-    // Ждем инициализации редактора
-    setTimeout(() => {
-        initializeAutoSave();
-    }, 1000);
-});
-
-function initializeAutoSave() {
-    console.log('AutoSave: Initializing...');
-    
-    // Ищем активные редакторы Quill
-    const quillEditors = document.querySelectorAll('.ql-editor');
-    const textareas = document.querySelectorAll('textarea.writer-editor');
-    
-    if (quillEditors.length === 0 || textareas.length === 0) {
-        console.log('AutoSave: No Quill editors found, retrying in 1s...');
-        setTimeout(initializeAutoSave, 1000);
-        return;
-    }
-
-    console.log(`AutoSave: Found ${quillEditors.length} Quill editor(s)`);
-
-    // Для каждого редактора настраиваем автосейв
-    quillEditors.forEach((quillEditor, index) => {
-        const textarea = textareas[index];
-        if (!textarea) return;
-
-        setupAutoSaveForEditor(quillEditor, textarea, index);
-    });
+/* ===== СТИЛИ ДЛЯ СПИСКА КНИГ ===== */
+.books-grid {
+    display: grid;
+    gap: 1.5rem;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
 }
 
-function setupAutoSaveForEditor(quillEditor, textarea, editorIndex) {
-    let saveTimeout;
-    let isSaving = false;
-    let lastSavedContent = textarea.value;
-    let changeCount = 0;
-
-    // Получаем экземпляр Quill из контейнера
-    const quillContainer = quillEditor.closest('.ql-container');
-    const quillInstance = quillContainer ? Quill.find(quillContainer) : null;
-    
-    if (!quillInstance) {
-        console.error(`AutoSave: Could not find Quill instance for editor ${editorIndex}`);
-        return;
-    }
-
-    console.log(`AutoSave: Setting up for editor ${editorIndex}`);
-
-    function showSaveMessage(message) {
-        let messageEl = document.getElementById('autosave-message');
-        if (!messageEl) {
-            messageEl = document.createElement('div');
-            messageEl.id = 'autosave-message';
-            messageEl.style.cssText = `
-                position: fixed; 
-                top: 70px; 
-                right: 10px; 
-                padding: 8px 12px; 
-                background: #28a745; 
-                color: white; 
-                border-radius: 3px; 
-                z-index: 10000; 
-                font-size: 0.8rem;
-                box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-            `;
-            document.body.appendChild(messageEl);
-        }
-        
-        messageEl.textContent = message;
-        messageEl.style.display = 'block';
-        
-        setTimeout(() => {
-            messageEl.style.display = 'none';
-        }, 2000);
-    }
-
-    function showError(message) {
-        let messageEl = document.getElementById('autosave-message');
-        if (!messageEl) {
-            messageEl = document.createElement('div');
-            messageEl.id = 'autosave-message';
-            messageEl.style.cssText = `
-                position: fixed; 
-                top: 70px; 
-                right: 10px; 
-                padding: 8px 12px; 
-                background: #dc3545; 
-                color: white; 
-                border-radius: 3px; 
-                z-index: 10000; 
-                font-size: 0.8rem;
-                box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-            `;
-            document.body.appendChild(messageEl);
-        }
-        
-        messageEl.textContent = message;
-        messageEl.style.background = '#dc3545';
-        messageEl.style.display = 'block';
-        
-        setTimeout(() => {
-            messageEl.style.display = 'none';
-            messageEl.style.background = '#28a745';
-        }, 3000);
-    }
-
-    function autoSave() {
-        if (isSaving) {
-            console.log('AutoSave: Already saving, skipping...');
-            return;
-        }
-
-        const currentContent = textarea.value;
-        
-        // Проверяем, изменилось ли содержимое
-        if (currentContent === lastSavedContent) {
-            console.log('AutoSave: No changes detected');
-            return;
-        }
-
-        changeCount++;
-        console.log(`AutoSave: Changes detected (${changeCount}), saving...`);
-
-        isSaving = true;
-
-        // Показываем индикатор сохранения
-        showSaveMessage('Сохранение...');
-
-        const formData = new FormData();
-        formData.append('content', currentContent);
-        
-        // Добавляем title если есть
-        const titleInput = document.querySelector('input[name="title"]');
-        if (titleInput) {
-            formData.append('title', titleInput.value);
-        }
-        
-        // Добавляем status если есть
-        const statusSelect = document.querySelector('select[name="status"]');
-        if (statusSelect) {
-            formData.append('status', statusSelect.value);
-        }
-        
-        formData.append('autosave', 'true');
-        formData.append('csrf_token', document.querySelector('input[name="csrf_token"]')?.value || '');
-
-        const currentUrl = window.location.href;
-        
-        fetch(currentUrl, {
-            method: 'POST',
-            body: formData
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            return response.json();
-        })
-        .then(data => {
-            if (data.success) {
-                lastSavedContent = currentContent;
-                showSaveMessage('Автосохранено: ' + new Date().toLocaleTimeString());
-                console.log('AutoSave: Successfully saved');
-            } else {
-                throw new Error(data.error || 'Unknown error');
-            }
-        })
-        .catch(error => {
-            console.error('AutoSave Error:', error);
-            showError('Ошибка автосохранения: ' + error.message);
-        })
-        .finally(() => {
-            isSaving = false;
-        });
-    }
-
-    // Слушаем изменения в Quill редакторе
-    quillInstance.on('text-change', function(delta, oldDelta, source) {
-        if (source === 'user') {
-            console.log('AutoSave: Text changed by user');
-            clearTimeout(saveTimeout);
-            saveTimeout = setTimeout(autoSave, 2000); // Сохраняем через 2 секунды после изменения
-        }
-    });
-
-    // Также слушаем изменения в title и status
-    const titleInput = document.querySelector('input[name="title"]');
-    if (titleInput) {
-        titleInput.addEventListener('input', function() {
-            clearTimeout(saveTimeout);
-            saveTimeout = setTimeout(autoSave, 2000);
-        });
-    }
-
-    const statusSelect = document.querySelector('select[name="status"]');
-    if (statusSelect) {
-        statusSelect.addEventListener('change', function() {
-            clearTimeout(saveTimeout);
-            saveTimeout = setTimeout(autoSave, 1000);
-        });
-    }
-
-    // Предупреждение при закрытии страницы с несохраненными изменениями
-    window.addEventListener('beforeunload', function(e) {
-        if (textarea.value !== lastSavedContent && !isSaving) {
-            e.preventDefault();
-            e.returnValue = 'У вас есть несохраненные изменения. Вы уверены, что хотите уйти?';
-            return e.returnValue;
-        }
-    });
-
-    // Периодическое сохранение каждые 30 секунд (на всякий случай)
-    setInterval(() => {
-        if (textarea.value !== lastSavedContent && !isSaving) {
-            console.log('AutoSave: Periodic save triggered');
-            autoSave();
-        }
-    }, 30000);
-
-    console.log(`AutoSave: Successfully set up for editor ${editorIndex}`);
+.book-card {
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    position: relative;
 }
-// ./assets/js/index.php
 
-// ./assets/js/editor.js
-// assets/js/editor.js
-class WriterEditor {
-    constructor() {
-        this.editors = [];
-        this.init();
+.book-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+    border-color: #007bff;
+}
+
+.book-cover-container {
+    position: relative;
+    height: 200px;
+    overflow: hidden;
+    background: #f8f9fa;
+}
+
+.book-cover {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.book-card:hover .book-cover {
+    transform: scale(1.05);
+}
+
+.cover-placeholder {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 3rem;
+}
+
+.book-status {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.book-status.published {
+    background: rgba(40, 167, 69, 0.9);
+    color: white;
+}
+
+.book-info {
+    padding: 1.5rem;
+}
+
+.book-title {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.2rem;
+    line-height: 1.3;
+}
+
+.book-title a {
+    text-decoration: none;
+    color: inherit;
+}
+
+.book-title a:hover {
+    color: #007bff;
+}
+
+.book-genre {
+    margin: 0 0 0.5rem 0;
+    color: #666;
+    font-style: italic;
+    font-size: 0.9rem;
+}
+
+.book-description {
+    margin: 0 0 1rem 0;
+    color: #555;
+    line-height: 1.4;
+    font-size: 0.9rem;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.book-stats {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    background: #f8f9fa;
+    border-radius: 4px;
+    font-size: 0.85rem;
+}
+
+.stat-item {
+    text-align: center;
+    flex: 1;
+}
+
+.stat-item strong {
+    display: block;
+    font-size: 1.1rem;
+    color: #6f42c1;
+}
+
+.book-actions {
+    display:grid;
+    gap: 0.5rem;
+    flex-wrap: nowrap;
+}
+
+.book-actions .compact-button {
+    flex: 1;
+    min-width: 0;
+    text-align: center;
+    white-space: nowrap;
+}
+
+/* Пустое состояние */
+.books-empty-state {
+    text-align: center;
+    padding: 3rem 2rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 2px dashed #dee2e6;
+}
+
+.books-empty-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+/* Футер со статистикой */
+.books-stats-footer {
+    margin-top: 2rem;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 5px;
+    text-align: center;
+    color: #666;
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .books-grid {
+        grid-template-columns: 1fr;
     }
-
-    init() {
-        // Инициализируем редакторы для текстовых областей с классом .writer-editor
-        document.querySelectorAll('textarea.writer-editor').forEach(textarea => {
-            this.initEditor(textarea);
-        });
+    
+    .book-stats {
+        flex-direction: column;
+        gap: 0.5rem;
     }
-
-    initEditor(textarea) {
-        // Создаем контейнер для Quill
-        const editorContainer = document.createElement('div');
-        editorContainer.className = 'writer-editor-container';
-        editorContainer.style.height = '500px';
-        editorContainer.style.marginBottom = '20px';
-
-        // Вставляем контейнер перед textarea
-        textarea.parentNode.insertBefore(editorContainer, textarea);
-        
-        // Скрываем оригинальный textarea
-        textarea.style.display = 'none';
-
-        // Настройки Quill
-        const quill = new Quill(editorContainer, {
-            theme: 'snow',
-            modules: {
-                toolbar: [
-                    [{ 'header': [1, 2, 3, false] }],
-                    ['bold', 'italic', 'underline', 'strike'],
-                    ['blockquote', 'code-block'],
-                    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-                    [{ 'script': 'sub'}, { 'script': 'super' }],
-                    [{ 'indent': '-1'}, { 'indent': '+1' }],
-                    [{ 'direction': 'rtl' }],
-                    [{ 'size': ['small', false, 'large', 'huge'] }],
-                    [{ 'color': [] }, { 'background': [] }],
-                    [{ 'font': [] }],
-                    [{ 'align': [] }],
-                    ['link', 'image', 'video'],
-                    ['clean']
-                ],
-                history: {
-                    delay: 1000,
-                    maxStack: 100,
-                    userOnly: true
-                }
-            },
-            placeholder: 'Начните писать вашу главу...',
-            formats: [
-                'header', 'bold', 'italic', 'underline', 'strike',
-                'blockquote', 'code-block', 'list', 'bullet',
-                'script', 'indent', 'direction', 'size',
-                'color', 'background', 'font', 'align',
-                'link', 'image', 'video'
-            ]
-        });
-
-        // Устанавливаем начальное содержимое
-        if (textarea.value) {
-            quill.root.innerHTML = textarea.value;
-        }
-
-        // Обновляем textarea при изменении содержимого
-        quill.on('text-change', () => {
-            textarea.value = quill.root.innerHTML;
-        });
-
-        // Сохраняем ссылку на редактор
-        this.editors.push({
-            quill: quill,
-            textarea: textarea
-        });
-
-        return quill;
+    
+    .book-actions {
+        flex-direction: column;
     }
-
-    // Метод для получения HTML содержимого
-    getContent(editorIndex = 0) {
-        if (this.editors[editorIndex]) {
-            return this.editors[editorIndex].quill.root.innerHTML;
-        }
-        return '';
-    }
-
-    // Метод для установки содержимого
-    setContent(content, editorIndex = 0) {
-        if (this.editors[editorIndex]) {
-            this.editors[editorIndex].quill.root.innerHTML = content;
-        }
+    
+    .book-actions .compact-button {
+        width: 100%;
     }
 }
 
-
-// Инициализация редактора при загрузке страницы
-document.addEventListener('DOMContentLoaded', function() {
-    window.writerEditor = new WriterEditor();
-});
+@media (max-width: 480px) {
+    .book-info {
+        padding: 1rem;
+    }
+    
+    .book-cover-container {
+        height: 160px;
+    }
+    
+    .cover-placeholder {
+        font-size: 2rem;
+    }
+}
 // ./config/index.php
 
 // ./config/config.php
@@ -5118,8 +5099,8 @@ EOT;
     <title><?= e($page_title ?? 'Web Writer') ?></title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1.5.10/css/pico.min.css">
     <link rel="stylesheet" href="<?= SITE_URL ?>/assets/css/style.css">
-    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
-    <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
+    <link href="<?= SITE_URL ?>/assets/css/quill.snow.css" rel="stylesheet">
+    <script src="<?= SITE_URL ?>/assets/js/quill.js"></script>
 </head>
 <body>
     <nav class="container-fluid">
@@ -5585,9 +5566,10 @@ include 'views/layouts/header.php';
 <div style="margin-bottom: 1rem;">
     <h1 style="margin: 0 0 0.5rem 0; font-size: 1.5rem;">Главы книги: <?= e($book['title']) ?></h1>
     <div style="display: flex; gap: 5px; flex-wrap: wrap;">
-        <a href="<?= SITE_URL ?>/books/<?= $book['id'] ?>/chapters/create" class="adaptive-button">➕ Новая глава</a>
-        <a href="<?= SITE_URL ?>/books/<?= $book['id'] ?>/edit" class="adaptive-button secondary">✏️ Редактировать книгу</a>
-        <a href="<?= SITE_URL ?>/book/<?= $book['share_token'] ?>" class="adaptive-button secondary" target="_blank">👁️ Просмотреть книгу</a>
+        <a href="<?= SITE_URL ?>/books/<?= $book['id'] ?>/chapters/create" class="adaptive-button" role="button">➕ Новая глава</a>
+        <a href="<?= SITE_URL ?>/books/<?= $book['id'] ?>/edit" class="adaptive-button secondary" role="button">✏️ Редактировать книгу</a>
+        <a href="<?= SITE_URL ?>/book/<?= $book['share_token'] ?>" class="adaptive-button green-btn" role="button" target="_blank">👁️ Публичный доступ</a>
+        <a href="<?= SITE_URL ?>/book/all/<?= $book['id'] ?>" class="adaptive-button secondary" role="button" target="_blank">👁️ Полный обзор</a>
         <a href="<?= SITE_URL ?>/books" class="adaptive-button secondary">📚 Все книги</a>
     </div>
 </div>
@@ -5720,7 +5702,7 @@ include 'views/layouts/header.php';
         </a>
     </div>
 </form>
-
+<link href="/assets/css/quill_reset.css" rel="stylesheet">
 <script>
 function previewChapter() {
     const form = document.getElementById('chapter-form');
@@ -5836,7 +5818,7 @@ include 'views/layouts/header.php';
     <p><strong>Создана:</strong> <?= date('d.m.Y H:i', strtotime($chapter['created_at'])) ?></p>
     <p><strong>Обновлена:</strong> <?= date('d.m.Y H:i', strtotime($chapter['updated_at'])) ?></p>
 </div>
-
+<link href="/assets/css/quill_reset.css" rel="stylesheet">
 <script>
 function previewChapter() {
     const form = document.getElementById('chapter-form');
@@ -5940,18 +5922,17 @@ include 'views/layouts/header.php';
                     </div>
                 </div>
 
-                <div class="series-actions">
-                    <a href="/series/<?= $ser['id'] ?>/edit" class="compact-button primary-btn">
+                <div class="series-actions" style="display:grid;">
+                    <a href="/series/<?= $ser['id'] ?>/edit" class="compact-button primary-btn" role="button">
                         ✏️ Управление
                     </a>
-                    <a href="/series/<?= $ser['id'] ?>/view" class="compact-button secondary-btn" target="_blank">
+                    <a href="/series/<?= $ser['id'] ?>/view" class="compact-button secondary-btn" target="_blank" role="button">
                         👁️ Публично
                     </a>
                     <form method="post" action="/series/<?= $ser['id'] ?>/delete" 
-                          style="display: inline;" 
                           onsubmit="return confirm('Удалить серию? Книги останутся, но будут удалены из серии.')">
                         <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
-                        <button type="submit" class="compact-button delete-btn">🗑️</button>
+                        <button type="submit" class="compact-button red-btn">🗑️</button>
                     </form>
                 </div>
             </article>
@@ -6875,11 +6856,11 @@ include 'views/layouts/header.php';
 include 'views/layouts/header.php';
 ?>
 
-<h1>Мои книги</h1>
+<h1>Мои книги <small style="color: #ccc; font-size:1rem;">(Всего книг: <?= count($books) ?>)</small></h1>
 
-<h2 style="margin: 0;">Всего книг: <?= count($books) ?></h2>
-<div style="display: flex; justify-content: right; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 1rem;">
-    <a href="<?= SITE_URL ?>/books/create" class="action-button primary">➕ Новая книга</a>
+
+<div style="display: flex; justify-content: left; margin-bottom: 1rem; flex-wrap: wrap; gap: 1rem;">
+    <a href="<?= SITE_URL ?>/books/create" class="action-button primary" role="button">➕ Новая книга</a>
     <?php if (!empty($books)): ?>
         <a href="#" onclick="showDeleteAllConfirmation()" class="action-button delete">🗑️ Удалить все книги</a>
     <?php endif; ?>
@@ -6892,49 +6873,83 @@ include 'views/layouts/header.php';
         <a href="<?= SITE_URL ?>/books/create" role="button">📖 Создать первую книгу</a>
     </article>
 <?php else: ?>
-    <div class="grid">
+    <div class="books-grid">
         <?php foreach ($books as $book): ?>
-        <article>
-            <header>
-                <h3 style="margin-bottom: 0.5rem;">
-                    <?= e($book['title']) ?>
-                    <div style="float: right; display: flex; gap: 3px;">
-                        <a href="<?= SITE_URL ?>/books/<?= $book['id'] ?>/edit" class="compact-button secondary" title="Редактировать книгу">
-                            ✏️
+            <article class="book-card">
+                <!-- Обложка книги -->
+                <div class="book-cover-container">
+                    <?php if (!empty($book['cover_image'])): ?>
+                        <img src="<?= COVERS_URL . e($book['cover_image']) ?>" 
+                             alt="<?= e($book['title']) ?>" 
+                             class="book-cover"
+                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                        <div class="cover-placeholder" style="display: none;">
+                            📚
+                        </div>
+                    <?php else: ?>
+                        <div class="cover-placeholder">
+                            📚
+                        </div>
+                    <?php endif; ?>
+                    
+                    <!-- Статус книги -->
+                    <div class="book-status <?= $book['published'] ? 'published' : 'draft' ?>">
+                        <?= $book['published'] ? '✅' : '📝' ?>
+                    </div>
+                </div>
+
+                <!-- Информация о книге -->
+                <div class="book-info">
+                    <h3 class="book-title">
+                        <a href="<?= SITE_URL ?>/books/<?= $book['id'] ?>/edit">
+                            <?= e($book['title']) ?>
                         </a>
-                        <a href="<?= SITE_URL ?>/book/<?= $book['share_token'] ?>" class="compact-button secondary" title="Просмотреть книгу" target="_blank">
-                            👁️
+                    </h3>
+                    
+                    <?php if (!empty($book['genre'])): ?>
+                        <p class="book-genre"><?= e($book['genre']) ?></p>
+                    <?php endif; ?>
+                    
+                    <?php if (!empty($book['description'])): ?>
+                        <p class="book-description">
+                            <?= e(mb_strimwidth($book['description'], 0, 120, '...')) ?>
+                        </p>
+                    <?php endif; ?>
+                    
+                    <!-- Статистика -->
+                    <div class="book-stats">
+                        <span class="stat-item">
+                            <strong><?= $book['chapter_count'] ?? 0 ?></strong> глав
+                        </span>
+                        <span class="stat-item">
+                            <strong><?= number_format($book['total_words'] ?? 0) ?></strong> слов
+                        </span>
+                    </div>
+                    
+                    <!-- Действия -->
+                    <div class="book-actions">
+                        <a href="<?= SITE_URL ?>/books/<?= $book['id'] ?>/edit" class="compact-button primary-btn">
+                            ✏️ Редактировать
+                        </a>
+                        <a href="<?= SITE_URL ?>/books/<?= $book['id'] ?>/chapters" class="compact-button secondary-btn">
+                            📑 Главы
+                        </a>
+                        <a href="<?= SITE_URL ?>/book/<?= $book['share_token'] ?>" class="compact-button secondary-btn" target="_blank">
+                            👁️ Просмотр
                         </a>
                     </div>
-                </h3>
-                <?php if ($book['genre']): ?>
-                    <p style="margin: 0; color: var(--muted-color);"><em><?= e($book['genre']) ?></em></p>
-                <?php endif; ?>
-            </header>
-            
-            <?php if ($book['description']): ?>
-                <p><?= e(mb_strimwidth($book['description'], 0, 200, '...')) ?></p>
-            <?php endif; ?>
-            
-            <footer>
-                <div>
-                    <small>
-                        Глав: <?= $book['chapter_count'] ?> | 
-                        Слов: <?= $book['total_words'] ?> | 
-                        Статус: <?= $book['published'] ? '✅ Опубликована' : '📝 Черновик' ?>
-                    </small>
                 </div>
-                <div style="margin-top: 0.5rem; display: flex; gap: 5px; flex-wrap: wrap;">
-                    <a href="<?= SITE_URL ?>/books/<?= $book['id'] ?>/chapters" class="adaptive-button secondary">
-                        📑 Главы
-                    </a>
-                    <a href="<?= SITE_URL ?>/export/<?= $book['id'] ?>" class="adaptive-button secondary" target="_blank">
-                        📄 Экспорт
-                    </a>
-                </div>
-            </footer>
-        </article>
+            </article>
         <?php endforeach; ?>
+    </div>
+
+    <!-- Статистика внизу -->
+    <div class="books-stats-footer">
+        <strong>Общая статистика:</strong> 
+        Книг: <?= count($books) ?> | 
+        Глав: <?= array_sum(array_column($books, 'chapter_count')) ?> | 
+        Слов: <?= number_format(array_sum(array_column($books, 'total_words'))) ?> |
+        Опубликовано: <?= count(array_filter($books, function($book) { return $book['published']; })) ?>
     </div>
 <?php endif; ?>
 <?php if (!empty($books)): ?>
@@ -6964,6 +6979,23 @@ include 'views/layouts/header.php';
 include 'views/layouts/header.php';
 ?>
 <h1>Создание новой книги</h1>
+<?php if (isset($_SESSION['error'])): ?>
+    <div class="alert alert-error">
+        <?= e($_SESSION['error']) ?>
+        <?php unset($_SESSION['error']); ?>
+    </div>
+<?php endif; ?>
+
+<?php if (isset($error) && $error): ?>
+    <div class="alert alert-error">
+        <?= e($error) ?>
+    </div>
+<?php endif; ?>
+<?php if (isset($cover_error) && $cover_error): ?>
+    <div class="alert alert-error">
+        Ошибка загрузки обложки: <?= e($cover_error) ?>
+    </div>
+<?php endif; ?>
 <form method="post" enctype="multipart/form-data">
     <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
     <div style="max-width: 100%; margin-bottom: 0.5rem;">
@@ -7001,6 +7033,16 @@ include 'views/layouts/header.php';
                   placeholder="Краткое описание сюжета или аннотация..." 
                   rows="6"
                   style="width: 100;"><?= e($_POST['description'] ?? '') ?></textarea>
+        <div style="margin-bottom: 1rem;">
+            <label for="cover_image" style="display: block; margin-bottom: 0.5rem; font-weight: bold;">
+                Обложка книги
+            </label>
+            <input type="file" id="cover_image" name="cover_image" 
+                accept="image/jpeg,image/png,image/gif,image/webp">
+            <small style="color: var(--muted-color);">
+                Разрешены форматы: JPG, PNG, GIF, WebP. Максимальный размер: 5MB.
+            </small>
+        </div>
         <div style="margin-top: 1rem;">
             <label for="published">
                 <input type="checkbox" id="published" name="published" value="1"
@@ -7024,6 +7066,12 @@ include 'views/layouts/header.php';
 // views/books/edit.php
 include 'views/layouts/header.php';
 ?>
+<?php if (isset($_SESSION['cover_error'])): ?>
+    <div class="alert alert-error">
+        Ошибка загрузки обложки: <?= e($_SESSION['cover_error']) ?>
+        <?php unset($_SESSION['cover_error']); ?>
+    </div>
+<?php endif; ?>
 <h1>Редактирование книги</h1>
 <form method="post" enctype="multipart/form-data">
     <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
@@ -7113,14 +7161,14 @@ include 'views/layouts/header.php';
         <button type="submit" class="contrast">
             💾 Сохранить изменения
         </button>
-        <a href="<?= SITE_URL ?>/books" role="button" class="secondary">
+        <!-- <a href="<?= SITE_URL ?>/books" role="button" class="secondary">
             ❌ Отмена
-        </a>
+        </a> -->
     </div>
 </form>
 
 <?php if ($book): ?>
-    <div style="margin-top: 2rem; padding: 1rem; background: var(--card-background-color); border-radius: 5px;">
+    <div style="margin-top: 0.5rem; padding: 0rem; background: var(--card-background-color); border-radius: 5px;">
         <h3>Публичная ссылка для чтения</h3>
         <div style="display: flex; gap: 5px; align-items: center; flex-wrap: wrap;">
             <input type="text" 
@@ -7128,12 +7176,12 @@ include 'views/layouts/header.php';
                    value="<?= e(SITE_URL . '/book/' . $book['share_token']) ?>" 
                    readonly 
                    style="flex: 1; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px; background: white;">
-            <button type="button" onclick="copyShareLink()" class="compact-button secondary">
+            <button type="button" onclick="copyShareLink()" class="adaptive-button">
                 📋 Копировать
             </button>
             <form method="post" action="<?= SITE_URL ?>/books/<?= $book['id'] ?>/regenerate-token" style="display: inline;">
                 <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
-                <button type="submit" class="compact-button secondary" onclick="return confirm('Создать новую ссылку? Старая ссылка перестанет работать.')">
+                <button type="submit" class="adaptive-button secondary" onclick="return confirm('Создать новую ссылку? Старая ссылка перестанет работать.')">
                     🔄 Обновить
                 </button>
             </form>
@@ -7142,20 +7190,20 @@ include 'views/layouts/header.php';
             <strong>Примечание:</strong> В публичном просмотре отображаются только главы со статусом "Опубликована"
         </p>
     </div>
-    <div style="margin-top: 2rem; padding: 1rem; background: var(--card-background-color); border-radius: 5px;">
+    <div style="margin-top: 0.5rem; padding: 0rem; background: var(--card-background-color); border-radius: 5px;">
         <h3>Экспорт книги</h3>
         <p style="margin-bottom: 0.5rem;">Экспортируйте книгу в различные форматы:</p>
         <div style="display: flex; gap: 5px; flex-wrap: wrap;">
-            <a href="<?= SITE_URL ?>/export/<?= $book['id'] ?>/pdf" class="adaptive-button secondary" target="_blank">
+            <a href="<?= SITE_URL ?>/export/<?= $book['id'] ?>/pdf" class="adaptive-button secondary" target="_blank" role="button">
                 📄 PDF
             </a>
-            <a href="<?= SITE_URL ?>/export/<?= $book['id'] ?>/docx" class="adaptive-button secondary" target="_blank">
+            <a href="<?= SITE_URL ?>/export/<?= $book['id'] ?>/docx" class="adaptive-button secondary" target="_blank" role="button">
                 📝 DOCX
             </a>
-            <a href="<?= SITE_URL ?>/export/<?= $book['id'] ?>/html" class="adaptive-button secondary" target="_blank">
+            <a href="<?= SITE_URL ?>/export/<?= $book['id'] ?>/html" class="adaptive-button secondary" target="_blank" role="button">
                 🌐 HTML
             </a>
-            <a href="<?= SITE_URL ?>/export/<?= $book['id'] ?>/txt" class="adaptive-button secondary" target="_blank">
+            <a href="<?= SITE_URL ?>/export/<?= $book['id'] ?>/txt" class="adaptive-button secondary" target="_blank" role="button">
                 📄 TXT
             </a>
         </div>
@@ -7163,13 +7211,13 @@ include 'views/layouts/header.php';
             <strong>Примечание:</strong> Экспортируются все главы книги (включая черновики)
         </p>
     </div>
-    <div style="margin-top: 3rem;">
+    <div style="margin-top: 0.5rem;">
         <h2>Главы этой книги</h2>
         <div style="display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 1rem;">
-            <a href="<?= SITE_URL ?>/books/<?= $book['id'] ?>/chapters" class="adaptive-button secondary">
+            <a href="<?= SITE_URL ?>/books/<?= $book['id'] ?>/chapters" class="adaptive-button secondary" role="button">
                 📑 Все главы
             </a>
-            <a href="<?= SITE_URL ?>/books/<?= $book['id'] ?>/chapters/create" class="adaptive-button secondary">
+            <a href="<?= SITE_URL ?>/books/<?= $book['id'] ?>/chapters/create" class="adaptive-button secondary" role="button">
                 ✏️ Добавить главу
             </a>
         </div>
@@ -7205,18 +7253,18 @@ include 'views/layouts/header.php';
                 </table>
             </div>
         <?php else: ?>
-            <div style="text-align: center; padding: 2rem; background: var(--card-background-color); border-radius: 5px;">
+            <div style="text-align: center; padding: 0.5rem; background: var(--card-background-color); border-radius: 5px;">
                 <p style="margin-bottom: 1rem;">В этой книге пока нет глав.</p>
-                <a href="<?= SITE_URL ?>/books/<?= $book['id'] ?>/chapters/create" class="adaptive-button secondary">
+                <a href="<?= SITE_URL ?>/books/<?= $book['id'] ?>/chapters/create" class="adaptive-button secondary" role="button">
                     ✏️ Добавить первую главу
                 </a>
             </div>
         <?php endif; ?>
     </div>
-    <div style="margin-top: 2rem; text-align: center;">
+    <div style="margin-top: 0.5rem; text-align: center;">
         <form method="post" action="<?= SITE_URL ?>/books/<?= $book['id'] ?>/delete" style="display: inline;" onsubmit="return confirm('Вы уверены, что хотите удалить книгу «<?= e($book['title']) ?>»? Все главы также будут удалены.');">
             <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
-            <button type="submit" class="button" style="background: #ff4444; border-color: #ff4444; color: white;">
+            <button type="submit" class="adaptive-button red-btn">
                 🗑️ Удалить книгу
             </button>
         </form>
@@ -7250,8 +7298,8 @@ document.addEventListener('DOMContentLoaded', function() {
 include 'views/layouts/header.php';
 ?>
 
-<div class="container">
-    <article style="max-width: 800px; margin: 0 auto;">
+<div class="container" style="padding: 0em; margin: 0em auto; width: 90%;">
+    <article style="margin: 0 auto;">
         <header style="text-align: center; margin-bottom: 2rem;">
             <?php if (!empty($book['cover_image'])): ?>
                 <div style="margin-bottom: 1rem;">
@@ -7265,7 +7313,7 @@ include 'views/layouts/header.php';
             <h1 style="margin-bottom: 0.5rem;"><?= e($book['title']) ?></h1>
             
             <p style="color: #666; font-style: italic; margin-bottom: 0.5rem;">
-                Автор: <a href="<?= SITE_URL ?>/author/<?= $book['user_id'] ?>"><?= e($author_name) ?></a>
+                Автор: <a href="<?= SITE_URL ?>/author/<?= $book['user_id'] ?>"><?= e($author['display_name']??$author['username']) ?></a>
             </p>
             
             <?php if (!empty($book['genre'])): ?>
@@ -7324,20 +7372,8 @@ include 'views/layouts/header.php';
                     </h2>
                     
                     <div style="margin-top: 1.5rem; line-height: 1.6;">
-                        <?php if ($book['editor_type'] == 'markdown'): ?>
-                            <?= $Parsedown->text($chapter['content']) ?>
-                        <?php else: ?>
-                            <?= $chapter['content'] ?>
-                        <?php endif; ?>
+                        <?= $chapter['content'] ?>
                     </div>
-                    
-                    <?php if ($index < count($chapters) - 1): ?>
-                        <div style="text-align: center; margin-top: 2rem;">
-                            <a href="#chapter-<?= $chapters[$index + 1]['id'] ?>" class="button">
-                                📖 Следующая глава
-                            </a>
-                        </div>
-                    <?php endif; ?>
                 </div>
             <?php endforeach; ?>
         <?php endif; ?>

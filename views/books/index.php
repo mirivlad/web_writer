@@ -6,8 +6,8 @@ include 'views/layouts/header.php';
 <h1>Мои книги <small style="color: #ccc; font-size:1rem;">(Всего книг: <?= count($books) ?>)</small></h1>
 
 
-<div style="display: flex; justify-content: right; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 1rem;">
-    <a href="<?= SITE_URL ?>/books/create" class="action-button primary">➕ Новая книга</a>
+<div style="display: flex; justify-content: left; margin-bottom: 1rem; flex-wrap: wrap; gap: 1rem;">
+    <a href="<?= SITE_URL ?>/books/create" class="action-button primary" role="button">➕ Новая книга</a>
     <?php if (!empty($books)): ?>
         <a href="#" onclick="showDeleteAllConfirmation()" class="action-button delete">🗑️ Удалить все книги</a>
     <?php endif; ?>
@@ -81,7 +81,7 @@ include 'views/layouts/header.php';
                         <a href="<?= SITE_URL ?>/books/<?= $book['id'] ?>/chapters" class="compact-button secondary-btn">
                             📑 Главы
                         </a>
-                        <a href="<?= SITE_URL ?>/book/<?= $book['share_token'] ?>" class="compact-button secondary-btn" target="_blank">
+                        <a href="<?= SITE_URL ?>/book/<?= $book['share_token'] ?>" class="compact-button green-btn" target="_blank">
                             👁️ Просмотр
                         </a>
                     </div>

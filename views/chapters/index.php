@@ -5,11 +5,11 @@ include 'views/layouts/header.php';
 
 <div style="margin-bottom: 1rem;">
     <h1 style="margin: 0 0 0.5rem 0; font-size: 1.5rem;">Главы книги: <?= e($book['title']) ?></h1>
-    <div style="display: flex; gap: 5px; flex-wrap: wrap;">
-        <a href="<?= SITE_URL ?>/books/<?= $book['id'] ?>/chapters/create" class="adaptive-button">➕ Новая глава</a>
-        <a href="<?= SITE_URL ?>/books/<?= $book['id'] ?>/edit" class="adaptive-button secondary">✏️ Редактировать книгу</a>
-        <a href="<?= SITE_URL ?>/book/<?= $book['share_token'] ?>" class="adaptive-button secondary" target="_blank">👁️ Просмотреть книгу</a>
-        <a href="<?= SITE_URL ?>/books" class="adaptive-button secondary">📚 Все книги</a>
+    <div style="display: flex; gap: 5px; flex-wrap: wrap; justify-content:center;">
+        <a href="<?= SITE_URL ?>/books/<?= $book['id'] ?>/chapters/create" class="adaptive-button" role="button">➕ Новая глава</a>
+        <a href="<?= SITE_URL ?>/books/<?= $book['id'] ?>/edit" class="adaptive-button secondary" role="button">✏️ Редактировать книгу</a>
+        <a href="<?= SITE_URL ?>/book/<?= $book['share_token'] ?>" class="adaptive-button green-btn" role="button" target="_blank">👁️ Публичный доступ</a>
+        <a href="<?= SITE_URL ?>/book/all/<?= $book['id'] ?>" class="adaptive-button" role="button" target="_blank">👁️ Полный обзор</a>
     </div>
 </div>
 
@@ -38,8 +38,8 @@ include 'views/layouts/header.php';
                     <td><?= $index + 1 ?></td>
                     <td>
                         <strong><?= e($chapter['title']) ?></strong>
-                        <?php if ($chapter['description']): ?>
-                            <br><small style="color: var(--muted-color);"><?= e(mb_strimwidth($chapter['description'], 0, 100, '...')) ?></small>
+                        <?php if ($chapter['content']): ?>
+                            <br><small style="color: var(--muted-color);"><?= e(mb_strimwidth($chapter['content'], 0, 100, '...')) ?></small>
                         <?php endif; ?>
                     </td>
                     <td>
@@ -53,7 +53,7 @@ include 'views/layouts/header.php';
                     </td>
                     <td>
                         <div style="display: flex; gap: 3px; flex-wrap: wrap;">
-                            <a href="<?= SITE_URL ?>/chapters/<?= $chapter['id'] ?>/edit" class="compact-button secondary" title="Редактировать">
+                            <a href="<?= SITE_URL ?>/chapters/<?= $chapter['id'] ?>/edit" class="compact-button secondary" title="Редактировать" role="button">
                                 ✏️
                             </a>
                             <form method="post" action="<?= SITE_URL ?>/chapters/<?= $chapter['id'] ?>/delete" style="display: inline;" onsubmit="return confirm('Вы уверены, что хотите удалить эту главу? Это действие нельзя отменить.');">

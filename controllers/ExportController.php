@@ -12,6 +12,7 @@ use TCPDF;
 class ExportController extends BaseController {
     
     public function export($book_id, $format = 'pdf') {
+        
         $this->requireLogin();
         
         $user_id = $_SESSION['user_id'];
@@ -45,7 +46,7 @@ class ExportController extends BaseController {
         }
 
         // Для публичного доступа - только опубликованные главы
-        $chapters = $bookModel->getPublishedChapters($book['id']);
+        $chapters = $chapterModel->getPublishedChapters($book['id']);
         
         // Получаем информацию об авторе
         $author_name = $this->getAuthorName($book['user_id']);

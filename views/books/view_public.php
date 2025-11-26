@@ -3,8 +3,8 @@
 include 'views/layouts/header.php';
 ?>
 
-<div class="container">
-    <article style="max-width: 800px; margin: 0 auto;">
+<div class="container" style="padding: 0em; margin: 0em auto; width: 90%;">
+    <article style="margin: 0 auto;">
         <header style="text-align: center; margin-bottom: 2rem;">
             <?php if (!empty($book['cover_image'])): ?>
                 <div style="margin-bottom: 1rem;">
@@ -18,7 +18,7 @@ include 'views/layouts/header.php';
             <h1 style="margin-bottom: 0.5rem;"><?= e($book['title']) ?></h1>
             
             <p style="color: #666; font-style: italic; margin-bottom: 0.5rem;">
-                Автор: <a href="<?= SITE_URL ?>/author/<?= $book['user_id'] ?>"><?= e($author_name) ?></a>
+                Автор: <a href="<?= SITE_URL ?>/author/<?= $book['user_id'] ?>"><?= e($author['display_name']??$author['username']) ?></a>
             </p>
             
             <?php if (!empty($book['genre'])): ?>
@@ -33,12 +33,43 @@ include 'views/layouts/header.php';
                 </div>
             <?php endif; ?>
             
-            <div style="display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap; font-size: 0.9em; color: #666;">
+            <div style="display: block; justify-content: center; gap: 1rem; flex-wrap: wrap; font-size: 0.9em; color: #666;">
                 <span>Глав: <?= count($chapters) ?></span>
                 <span>Слов: <?= array_sum(array_column($chapters, 'word_count')) ?></span>
-                <a href="<?= SITE_URL ?>/export/shared/<?= $book['share_token'] ?>" class="adaptive-button secondary" style="font-size: 0.8em;">
-                    📄 Скачать книгу
-                </a>
+                <p>
+                    <?php if (!is_logged_in()): ?>
+                        <div style="display: flex; gap: 5px; flex-wrap: wrap; justify-content: center;">
+                            <a href="<?= SITE_URL ?>/export/shared/<?= $book['share_token'] ?>/pdf" class="adaptive-button secondary" target="_blank" role="button">
+                                📄 PDF
+                            </a>
+                            <a href="<?= SITE_URL ?>/export/shared/<?= $book['share_token'] ?>/docx" class="adaptive-button secondary" target="_blank" role="button">
+                                📝 DOCX
+                            </a>
+                            <a href="<?= SITE_URL ?>/export/shared/<?= $book['share_token'] ?>/html" class="adaptive-button secondary" target="_blank" role="button">
+                                🌐 HTML
+                            </a>
+                            <a href="<?= SITE_URL ?>/export/shared/<?= $book['share_token'] ?>/txt" class="adaptive-button secondary" target="_blank" role="button">
+                                📄 TXT
+                            </a>
+                        </div>
+                    <?php endif; ?>
+                    <?php if (is_logged_in()): ?>
+                        <div style="display: flex; gap: 5px; flex-wrap: wrap; justify-content: center;">
+                            <a href="<?= SITE_URL ?>/export/<?= $book['id'] ?>/pdf" class="adaptive-button secondary" target="_blank" role="button">
+                                📄 PDF
+                            </a>
+                            <a href="<?= SITE_URL ?>/export/<?= $book['id'] ?>/docx" class="adaptive-button secondary" target="_blank" role="button">
+                                📝 DOCX
+                            </a>
+                            <a href="<?= SITE_URL ?>/export/<?= $book['id'] ?>/html" class="adaptive-button secondary" target="_blank" role="button">
+                                🌐 HTML
+                            </a>
+                            <a href="<?= SITE_URL ?>/export/<?= $book['id'] ?>/txt" class="adaptive-button secondary" target="_blank" role="button">
+                                📄 TXT
+                            </a>
+                        </div>
+                    <?php endif; ?>
+                    </p>
             </div>
         </header>
 
@@ -48,23 +79,15 @@ include 'views/layouts/header.php';
                 <p>Автор еще не опубликовал содержание книги</p>
             </div>
         <?php else: ?>
-            <h2 style="text-align: center; margin-bottom: 2rem;">Оглавление</h2>
-            
+            <h3 style="text-align: center; margin-bottom: 2rem; margin-top: 0em;">Оглавление</h3>
             <div class="chapters-list">
                 <?php foreach ($chapters as $index => $chapter): ?>
-                    <article style="margin-bottom: 1rem; padding: 1rem; background: var(--card-background-color); border-radius: 8px;">
-                        <h3 style="margin-top: 0;">
+                    
+                        <h6 style="margin-top: 0; margin-bottom: 0em;">
                             <a href="#chapter-<?= $chapter['id'] ?>" style="text-decoration: none;">
                                 Глава <?= $index + 1 ?>: <?= e($chapter['title']) ?>
                             </a>
-                        </h3>
-                        <div style="display: flex; gap: 10px; align-items: center;">
-                            <small style="color: var(--muted-color);">
-                                Слов: <?= $chapter['word_count'] ?> 
-                                | Обновлено: <?= date('d.m.Y', strtotime($chapter['updated_at'])) ?>
-                            </small>
-                        </div>
-                    </article>
+                        </h6>
                 <?php endforeach; ?>
             </div>
 
@@ -77,20 +100,8 @@ include 'views/layouts/header.php';
                     </h2>
                     
                     <div style="margin-top: 1.5rem; line-height: 1.6;">
-                        <?php if ($book['editor_type'] == 'markdown'): ?>
-                            <?= $Parsedown->text($chapter['content']) ?>
-                        <?php else: ?>
-                            <?= $chapter['content'] ?>
-                        <?php endif; ?>
+                        <?= $chapter['content'] ?>
                     </div>
-                    
-                    <?php if ($index < count($chapters) - 1): ?>
-                        <div style="text-align: center; margin-top: 2rem;">
-                            <a href="#chapter-<?= $chapters[$index + 1]['id'] ?>" class="button">
-                                📖 Следующая глава
-                            </a>
-                        </div>
-                    <?php endif; ?>
                 </div>
             <?php endforeach; ?>
         <?php endif; ?>

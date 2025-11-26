@@ -97,14 +97,14 @@ include 'views/layouts/header.php';
         <button type="submit" class="contrast">
             💾 Сохранить изменения
         </button>
-        <a href="<?= SITE_URL ?>/books" role="button" class="secondary">
+        <!-- <a href="<?= SITE_URL ?>/books" role="button" class="secondary">
             ❌ Отмена
-        </a>
+        </a> -->
     </div>
 </form>
 
 <?php if ($book): ?>
-    <div style="margin-top: 2rem; padding: 1rem; background: var(--card-background-color); border-radius: 5px;">
+    <div style="margin-top: 0.5rem; padding: 0rem; background: var(--card-background-color); border-radius: 5px;">
         <h3>Публичная ссылка для чтения</h3>
         <div style="display: flex; gap: 5px; align-items: center; flex-wrap: wrap;">
             <input type="text" 
@@ -112,12 +112,12 @@ include 'views/layouts/header.php';
                    value="<?= e(SITE_URL . '/book/' . $book['share_token']) ?>" 
                    readonly 
                    style="flex: 1; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px; background: white;">
-            <button type="button" onclick="copyShareLink()" class="compact-button secondary">
+            <button type="button" onclick="copyShareLink()" class="adaptive-button">
                 📋 Копировать
             </button>
             <form method="post" action="<?= SITE_URL ?>/books/<?= $book['id'] ?>/regenerate-token" style="display: inline;">
                 <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
-                <button type="submit" class="compact-button secondary" onclick="return confirm('Создать новую ссылку? Старая ссылка перестанет работать.')">
+                <button type="submit" class="adaptive-button secondary" onclick="return confirm('Создать новую ссылку? Старая ссылка перестанет работать.')">
                     🔄 Обновить
                 </button>
             </form>
@@ -126,20 +126,20 @@ include 'views/layouts/header.php';
             <strong>Примечание:</strong> В публичном просмотре отображаются только главы со статусом "Опубликована"
         </p>
     </div>
-    <div style="margin-top: 2rem; padding: 1rem; background: var(--card-background-color); border-radius: 5px;">
+    <div style="margin-top: 0.5rem; padding: 0rem; background: var(--card-background-color); border-radius: 5px;">
         <h3>Экспорт книги</h3>
         <p style="margin-bottom: 0.5rem;">Экспортируйте книгу в различные форматы:</p>
         <div style="display: flex; gap: 5px; flex-wrap: wrap;">
-            <a href="<?= SITE_URL ?>/export/<?= $book['id'] ?>/pdf" class="adaptive-button secondary" target="_blank">
+            <a href="<?= SITE_URL ?>/export/<?= $book['id'] ?>/pdf" class="adaptive-button secondary" target="_blank" role="button">
                 📄 PDF
             </a>
-            <a href="<?= SITE_URL ?>/export/<?= $book['id'] ?>/docx" class="adaptive-button secondary" target="_blank">
+            <a href="<?= SITE_URL ?>/export/<?= $book['id'] ?>/docx" class="adaptive-button secondary" target="_blank" role="button">
                 📝 DOCX
             </a>
-            <a href="<?= SITE_URL ?>/export/<?= $book['id'] ?>/html" class="adaptive-button secondary" target="_blank">
+            <a href="<?= SITE_URL ?>/export/<?= $book['id'] ?>/html" class="adaptive-button secondary" target="_blank" role="button">
                 🌐 HTML
             </a>
-            <a href="<?= SITE_URL ?>/export/<?= $book['id'] ?>/txt" class="adaptive-button secondary" target="_blank">
+            <a href="<?= SITE_URL ?>/export/<?= $book['id'] ?>/txt" class="adaptive-button secondary" target="_blank" role="button">
                 📄 TXT
             </a>
         </div>
@@ -147,13 +147,13 @@ include 'views/layouts/header.php';
             <strong>Примечание:</strong> Экспортируются все главы книги (включая черновики)
         </p>
     </div>
-    <div style="margin-top: 3rem;">
+    <div style="margin-top: 0.5rem;">
         <h2>Главы этой книги</h2>
         <div style="display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 1rem;">
-            <a href="<?= SITE_URL ?>/books/<?= $book['id'] ?>/chapters" class="adaptive-button secondary">
+            <a href="<?= SITE_URL ?>/books/<?= $book['id'] ?>/chapters" class="adaptive-button secondary" role="button">
                 📑 Все главы
             </a>
-            <a href="<?= SITE_URL ?>/books/<?= $book['id'] ?>/chapters/create" class="adaptive-button secondary">
+            <a href="<?= SITE_URL ?>/books/<?= $book['id'] ?>/chapters/create" class="adaptive-button secondary" role="button">
                 ✏️ Добавить главу
             </a>
         </div>
@@ -189,18 +189,18 @@ include 'views/layouts/header.php';
                 </table>
             </div>
         <?php else: ?>
-            <div style="text-align: center; padding: 2rem; background: var(--card-background-color); border-radius: 5px;">
+            <div style="text-align: center; padding: 0.5rem; background: var(--card-background-color); border-radius: 5px;">
                 <p style="margin-bottom: 1rem;">В этой книге пока нет глав.</p>
-                <a href="<?= SITE_URL ?>/books/<?= $book['id'] ?>/chapters/create" class="adaptive-button secondary">
+                <a href="<?= SITE_URL ?>/books/<?= $book['id'] ?>/chapters/create" class="adaptive-button secondary" role="button">
                     ✏️ Добавить первую главу
                 </a>
             </div>
         <?php endif; ?>
     </div>
-    <div style="margin-top: 2rem; text-align: center;">
+    <div style="margin-top: 0.5rem; text-align: center;">
         <form method="post" action="<?= SITE_URL ?>/books/<?= $book['id'] ?>/delete" style="display: inline;" onsubmit="return confirm('Вы уверены, что хотите удалить книгу «<?= e($book['title']) ?>»? Все главы также будут удалены.');">
             <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
-            <button type="submit" class="button" style="background: #ff4444; border-color: #ff4444; color: white;">
+            <button type="submit" class="adaptive-button red-btn">
                 🗑️ Удалить книгу
             </button>
         </form>

@@ -53,7 +53,8 @@ class ChapterController extends BaseController {
                 $error = "Ошибка безопасности";
             } else {
                 $title = trim($_POST['title'] ?? '');
-                $content = $_POST['content'] ?? '';
+                $content = trim($_POST['content']) ?? '';
+                $content = $this->cleanChapterContent($content);
                 $status = $_POST['status'] ?? 'draft';
 
                 if (empty($title)) {
@@ -85,29 +86,16 @@ class ChapterController extends BaseController {
     
     public function edit($id) {
         $this->requireLogin();
-        
+
         $user_id = $_SESSION['user_id'];
-        
+
         $chapterModel = new Chapter($this->pdo);
         $bookModel = new Book($this->pdo);
 
-        // Проверяем права доступа к главе
-        if (!$chapterModel->userOwnsChapter($id, $user_id)) {
-            if (isset($_POST['autosave']) && $_POST['autosave'] === 'true') {
-                // Для AJAX запросов возвращаем JSON
-                header('Content-Type: application/json');
-                echo json_encode(['success' => false, 'error' => 'Доступ запрещен']);
-                exit;
-            }
-            $_SESSION['error'] = "У вас нет доступа к этой главе";
-            $this->redirect('/books');
-        }
-
+        // Получаем главу и книгу
         $chapter = $chapterModel->findById($id);
-        
-        // Дополнительная проверка - глава должна существовать
         if (!$chapter) {
-            if (isset($_POST['autosave']) && $_POST['autosave'] === 'true') {
+            if (!empty($_POST['autosave']) && $_POST['autosave'] === 'true') {
                 header('Content-Type: application/json');
                 echo json_encode(['success' => false, 'error' => 'Глава не найдена']);
                 exit;
@@ -117,53 +105,69 @@ class ChapterController extends BaseController {
         }
 
         $book = $bookModel->findById($chapter['book_id']);
-        $error = '';
 
+        // Проверяем права доступа
+        if (!$chapterModel->userOwnsChapter($id, $user_id)) {
+            if (!empty($_POST['autosave']) && $_POST['autosave'] === 'true') {
+                header('Content-Type: application/json');
+                echo json_encode(['success' => false, 'error' => 'Доступ запрещен']);
+                exit;
+            }
+            $_SESSION['error'] = "У вас нет доступа к этой главе";
+            $this->redirect('/books');
+        }
+
+        // Обработка POST запроса
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $title = trim($_POST['title'] ?? '');
+            $content = $this->cleanChapterContent($_POST['content'] ?? '');
+            $status = $_POST['status'] ?? 'draft';
+
+            // Проверяем CSRF
             if (!verify_csrf_token($_POST['csrf_token'] ?? '')) {
+                if (!empty($_POST['autosave']) && $_POST['autosave'] === 'true') {
+                    header('Content-Type: application/json');
+                    echo json_encode(['success' => false, 'error' => 'Ошибка безопасности']);
+                    exit;
+                }
                 $error = "Ошибка безопасности";
-            } else {
-                $title = trim($_POST['title'] ?? '');
-                $content = $_POST['content'] ?? '';
-                $status = $_POST['status'] ?? 'draft';
+            }
 
-                if (empty($title)) {
-                    $error = "Название главы обязательно";
+            if (empty($title)) {
+                $error = "Название главы обязательно";
+            }
+
+            $data = ['title' => $title, 'content' => $content, 'status' => $status];
+
+            // Если это автосейв — возвращаем JSON сразу
+            if (!empty($_POST['autosave']) && $_POST['autosave'] === 'true') {
+                if (empty($error)) {
+                    $success = $chapterModel->update($id, $data);
+                    header('Content-Type: application/json');
+                    echo json_encode(['success' => $success, 'error' => $success ? null : 'Ошибка при сохранении']);
                 } else {
-                    $data = [
-                        'title' => $title,
-                        'content' => $content,
-                        'status' => $status
-                    ];
+                    header('Content-Type: application/json');
+                    echo json_encode(['success' => false, 'error' => $error]);
+                }
+                exit;
+            }
 
-                    // Если это запрос автосейва, возвращаем JSON ответ
-                    if (isset($_POST['autosave']) && $_POST['autosave'] === 'true') {
-                        if ($chapterModel->update($id, $data)) {
-                            header('Content-Type: application/json');
-                            echo json_encode(['success' => true]);
-                            exit;
-                        } else {
-                            header('Content-Type: application/json');
-                            echo json_encode(['success' => false, 'error' => 'Ошибка при сохранении']);
-                            exit;
-                        }
-                    }
-
-                    // Обычный POST запрос (сохранение формы)
-                    if ($chapterModel->update($id, $data)) {
-                        $_SESSION['success'] = "Глава успешно обновлена";
-                        $this->redirect("/books/{$chapter['book_id']}/chapters");
-                    } else {
-                        $error = "Ошибка при обновлении главы";
-                    }
+            // Обычное сохранение формы
+            if (empty($error)) {
+                if ($chapterModel->update($id, $data)) {
+                    $_SESSION['success'] = "Глава успешно обновлена";
+                    $this->redirect("/books/{$chapter['book_id']}/chapters");
+                } else {
+                    $error = "Ошибка при обновлении главы";
                 }
             }
         }
 
+        // Рендер страницы
         $this->render('chapters/edit', [
             'chapter' => $chapter,
             'book' => $book,
-            'error' => $error,
+            'error' => $error ?? '',
             'page_title' => "Редактирование главы: " . e($chapter['title'])
         ]);
     }
@@ -202,21 +206,40 @@ class ChapterController extends BaseController {
 
         $this->redirect("/books/{$book_id}/chapters");
     }
-    
     public function preview() {
         $this->requireLogin();
         
         $content = $_POST['content'] ?? '';
+        $content = $this->cleanChapterContent($content);
         $title = $_POST['title'] ?? 'Предпросмотр';
         
-        // Просто используем HTML как есть
-        $html_content = $content;
-        
         $this->render('chapters/preview', [
-            'content' => $html_content,
+            'content' => $content,
             'title' => $title,
             'page_title' => "Предпросмотр: " . e($title)
         ]);
+    }
+
+    // Добавьте эту функцию в начало файла
+    function cleanChapterContent($content) {
+        // Удаляем лишние пробелы в начале и конце
+        $content = trim($content);
+        
+        // Удаляем пустые абзацы и параграфы, содержащие только пробелы
+        $content = preg_replace('/<p[^>]*>\s*(?:<br\s*\/?>|&nbsp;)?\s*<\/p>/i', '', $content);
+        $content = preg_replace('/<p[^>]*>\s*<\/p>/i', '', $content);
+        
+        // Удаляем последовательные пустые абзацы
+        $content = preg_replace('/(<\/p>\s*<p[^>]*>)+/', '</p><p>', $content);
+        
+        // Удаляем лишние пробелы в начале и конце каждого параграфа
+        $content = preg_replace('/(<p[^>]*>)\s+/', '$1', $content);
+        $content = preg_replace('/\s+<\/p>/', '</p>', $content);
+        
+        // Удаляем лишние переносы строк
+        $content = preg_replace('/\n{3,}/', "\n\n", $content);
+        
+        return $content;
     }
 
 }

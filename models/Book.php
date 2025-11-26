@@ -148,15 +148,7 @@ class Book {
         return $success ? $new_token : false;
     }
     
-    public function getPublishedChapters($book_id) {
-        $stmt = $this->pdo->prepare("
-            SELECT * FROM chapters 
-            WHERE book_id = ? AND status = 'published' 
-            ORDER BY sort_order, created_at
-        ");
-        $stmt->execute([$book_id]);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
+
 
     public function updateCover($book_id, $filename) {
         $stmt = $this->pdo->prepare("UPDATE books SET cover_image = ? WHERE id = ?");
@@ -218,27 +210,12 @@ class Book {
         $stmt->execute([$book_id]);
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
-    
-    
 
-    private function getAllChapters($book_id) {
-        $stmt = $this->pdo->prepare("SELECT id, content FROM chapters WHERE book_id = ?");
-        $stmt->execute([$book_id]);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
-
-    private function updateChapterContent($chapter_id, $content) {
-        $word_count = $this->countWords($content);
-        $stmt = $this->pdo->prepare("
-            UPDATE chapters 
-            SET content = ?, word_count = ?, updated_at = CURRENT_TIMESTAMP 
-            WHERE id = ?
-        ");
-        return $stmt->execute([$content, $word_count, $chapter_id]);
-    }
     
     public function getBooksNotInSeries($user_id, $series_id = null) {
-        $sql = "SELECT * FROM books WHERE user_id = ? AND (series_id IS NULL OR series_id = ?)";
+        $sql = "SELECT * FROM books 
+                WHERE user_id = ? 
+                AND (series_id IS NULL OR series_id != ? OR series_id = 0)";
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute([$user_id, $series_id]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);

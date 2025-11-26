@@ -245,13 +245,14 @@ class BookController extends BaseController {
     
     public function viewPublic($share_token) {
         $bookModel = new Book($this->pdo);
+        $chapterModel = new Chapter($this->pdo);
         $book = $bookModel->findByShareToken($share_token);
         if (!$book) {
             http_response_code(404);
             $this->render('errors/404');
             return;
         }
-        $chapters = $bookModel->getPublishedChapters($book['id']);
+        $chapters = $chapterModel->getPublishedChapters($book['id']);
         
         // Получаем информацию об авторе
         $stmt = $this->pdo->prepare("SELECT id, username, display_name FROM users WHERE id = ?");
@@ -266,6 +267,29 @@ class BookController extends BaseController {
         ]);
     }
     
+    public function viewAll($id) {
+        $bookModel = new Book($this->pdo);
+        $chapterModel = new Chapter($this->pdo);
+        $book = $bookModel->findById($id);
+        if (!$book) {
+            http_response_code(404);
+            $this->render('errors/404');
+            return;
+        }
+        $chapters = $chapterModel->findByBook($book['id']);
+        
+        // Получаем информацию об авторе
+        $stmt = $this->pdo->prepare("SELECT id, username, display_name FROM users WHERE id = ?");
+        $stmt->execute([$book['user_id']]);
+        $author = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        $this->render('books/view_public', [
+            'book' => $book,
+            'chapters' => $chapters,
+            'author' => $author,
+            'page_title' => $book['title']
+        ]);
+    }
     
     public function regenerateToken($id) {
         $this->requireLogin();

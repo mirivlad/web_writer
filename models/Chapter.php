@@ -97,5 +97,32 @@ class Chapter {
         return $stmt->fetch() !== false;
     }
 
+        
+    public function getPublishedChapters($book_id) {
+        $stmt = $this->pdo->prepare("
+            SELECT * FROM chapters 
+            WHERE book_id = ? AND status = 'published' 
+            ORDER BY sort_order, created_at
+        ");
+        $stmt->execute([$book_id]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    // private function getAllChapters($book_id) {
+    //     $stmt = $this->pdo->prepare("SELECT id, content FROM chapters WHERE book_id = ?");
+    //     $stmt->execute([$book_id]);
+    //     return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    // }
+
+    // private function updateChapterContent($chapter_id, $content) {
+    //     $word_count = $this->countWords($content);
+    //     $stmt = $this->pdo->prepare("
+    //         UPDATE chapters 
+    //         SET content = ?, word_count = ?, updated_at = CURRENT_TIMESTAMP 
+    //         WHERE id = ?
+    //     ");
+    //     return $stmt->execute([$content, $word_count, $chapter_id]);
+    // }
+
 }
 ?>

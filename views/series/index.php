@@ -2,9 +2,9 @@
 include 'views/layouts/header.php';
 ?>
 
-<div style="display: flex; justify-content: between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
+<div style="display: block; justify-content: between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
     <h1 style="margin: 0;">Мои серии книг</h1>
-    <a href="/series/create" class="action-button primary">➕ Создать серию</a>
+    <a href="/series/create" class="action-button primary" role="button">➕ Создать серию</a>
 </div>
 
 <?php if (empty($series)): ?>
@@ -15,7 +15,7 @@ include 'views/layouts/header.php';
             Создайте свою первую серию, чтобы организовать книги в циклы и сериалы.
         </p>
         <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
-            <a href="/series/create" class="action-button primary">Создать серию</a>
+            <a href="/series/create" class="action-button primary" role="button">Создать серию</a>
             <a href="/books" class="action-button secondary">Перейти к книгам</a>
         </div>
     </article>
@@ -61,18 +61,17 @@ include 'views/layouts/header.php';
                     </div>
                 </div>
 
-                <div class="series-actions">
-                    <a href="/series/<?= $ser['id'] ?>/edit" class="compact-button primary-btn">
+                <div class="series-actions" style="display:grid;">
+                    <a href="/series/<?= $ser['id'] ?>/edit" class="compact-button primary-btn" role="button">
                         ✏️ Управление
                     </a>
-                    <a href="/series/<?= $ser['id'] ?>/view" class="compact-button secondary-btn" target="_blank">
+                    <a href="/series/<?= $ser['id'] ?>/view" class="compact-button secondary-btn" target="_blank" role="button">
                         👁️ Публично
                     </a>
                     <form method="post" action="/series/<?= $ser['id'] ?>/delete" 
-                          style="display: inline;" 
                           onsubmit="return confirm('Удалить серию? Книги останутся, но будут удалены из серии.')">
                         <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
-                        <button type="submit" class="compact-button delete-btn">🗑️</button>
+                        <button type="submit" class="compact-button red-btn">🗑️ Удалить</button>
                     </form>
                 </div>
             </article>

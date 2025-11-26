@@ -17,36 +17,38 @@ $requestPath = ltrim($requestPath, '/');
 
 // Проверяем, существует ли запрашиваемый файл
 $physicalPath = __DIR__ . '/' . $requestPath;
-if (file_exists($physicalPath) && !is_dir($physicalPath) && !str_contains($physicalPath, '..')) {
-    // Определяем MIME-тип
-    $mimeTypes = [
-        'css' => 'text/css',
-        'js' => 'application/javascript',
-        'png' => 'image/png',
-        'jpg' => 'image/jpeg',
-        'jpeg' => 'image/jpeg',
-        'gif' => 'image/gif',
-        'webp' => 'image/webp',
-        'svg' => 'image/svg+xml',
-        'ico' => 'image/x-icon',
-        'json' => 'application/json',
-        'woff' => 'font/woff',
-        'woff2' => 'font/woff2',
-        'ttf' => 'font/ttf',
-        'eot' => 'application/vnd.ms-fontobject',
-    ];
-    
-    $extension = strtolower(pathinfo($physicalPath, PATHINFO_EXTENSION));
-    if (isset($mimeTypes[$extension])) {
-        header('Content-Type: ' . $mimeTypes[$extension]);
+if (pathinfo($physicalPath, PATHINFO_EXTENSION) != 'php') {
+    if (file_exists($physicalPath) && !is_dir($physicalPath) && !str_contains($physicalPath, '..')) {
+        // Определяем MIME-тип
+        $mimeTypes = [
+            'css' => 'text/css',
+            'js' => 'application/javascript',
+            'png' => 'image/png',
+            'jpg' => 'image/jpeg',
+            'jpeg' => 'image/jpeg',
+            'gif' => 'image/gif',
+            'webp' => 'image/webp',
+            'svg' => 'image/svg+xml',
+            'ico' => 'image/x-icon',
+            'json' => 'application/json',
+            'woff' => 'font/woff',
+            'woff2' => 'font/woff2',
+            'ttf' => 'font/ttf',
+            'eot' => 'application/vnd.ms-fontobject',
+        ];
+        
+        $extension = strtolower(pathinfo($physicalPath, PATHINFO_EXTENSION));
+        if (isset($mimeTypes[$extension])) {
+            header('Content-Type: ' . $mimeTypes[$extension]);
+        }
+        
+        // Запрещаем кэширование для разработки, в продакшене можно увеличить время
+        header('Cache-Control: public, max-age=3600');
+        
+        // Отправляем файл
+        readfile($physicalPath);
+        exit;
     }
-    
-    // Запрещаем кэширование для разработки, в продакшене можно увеличить время
-    header('Cache-Control: public, max-age=3600');
-    
-    // Отправляем файл
-    readfile($physicalPath);
-    exit;
 }
 // Простой роутер
 class Router {
@@ -87,23 +89,19 @@ class Router {
     
     private function callHandler($handler, $params) {
         if (is_callable($handler)) {
-            return call_user_func_array($handler, $params);
+            return call_user_func_array($handler, array_values($params));
         }
-        
         if (is_string($handler)) {
             list($controller, $method) = explode('@', $handler);
             $controllerFile = "controllers/{$controller}.php";
-            
             if (file_exists($controllerFile)) {
                 require_once $controllerFile;
                 $controllerInstance = new $controller();
-                
                 if (method_exists($controllerInstance, $method)) {
-                    return call_user_func_array([$controllerInstance, $method], $params);
+                    return call_user_func_array([$controllerInstance, $method], array_values($params));
                 }
             }
         }
-        
         throw new Exception("Handler not found");
     }
 }
@@ -113,12 +111,15 @@ $router = new Router();
 
 // Маршруты
 $router->add('/', 'DashboardController@index');
+$router->add('/dashboard', 'DashboardController@index');
+$router->add('/index.php', 'DashboardController@index');
 $router->add('/login', 'AuthController@login');
 $router->add('/logout', 'AuthController@logout');
 $router->add('/register', 'AuthController@register');
 
 // Книги
 $router->add('/books', 'BookController@index');
+$router->add('/book/all/{id}', 'BookController@viewAll');
 $router->add('/books/create', 'BookController@create');
 $router->add('/books/{id}/edit', 'BookController@edit');
 $router->add('/books/{id}/delete', 'BookController@delete');
@@ -147,10 +148,12 @@ $router->add('/profile', 'UserController@profile');
 $router->add('/profile/update', 'UserController@updateProfile');
 
 // Экспорт с параметром формата
-$router->add('/export/{book_id}/{format}', 'ExportController@export');
-$router->add('/export/{book_id}', 'ExportController@export'); // по умолчанию pdf
+//публичный экспорт
 $router->add('/export/shared/{share_token}/{format}', 'ExportController@exportShared');
 $router->add('/export/shared/{share_token}', 'ExportController@exportShared'); // по умолчанию pdf
+//авторсикй экспорт
+$router->add('/export/{book_id}/{format}', 'ExportController@export');
+$router->add('/export/{book_id}', 'ExportController@export'); // по умолчанию pdf
 
 // Публичные страницы
 $router->add('/book/{share_token}', 'BookController@viewPublic');

@@ -1,6 +1,6 @@
 <?php include 'views/layouts/header.php'; ?>
 
-<div class="container">
+<div class="container" style="margin:0; width: auto;">
     <h1>Управление пользователями</h1>
     
     <?php if (isset($_SESSION['success'])): ?>
@@ -29,7 +29,7 @@
             <a href="<?= SITE_URL ?>/admin/add-user" role="button">📝 Добавить пользователя</a>
         </article>
     <?php else: ?>
-        <div style="overflow-x: auto;">
+        <div style="overflow-x: auto; width:100%;">
             <table class="compact-table">
                 <thead>
                     <tr>

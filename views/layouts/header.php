@@ -9,8 +9,8 @@
     <title><?= e($page_title ?? 'Web Writer') ?></title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1.5.10/css/pico.min.css">
     <link rel="stylesheet" href="<?= SITE_URL ?>/assets/css/style.css">
-    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
-    <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
+    <link href="<?= SITE_URL ?>/assets/css/quill.snow.css" rel="stylesheet">
+    <script src="<?= SITE_URL ?>/assets/js/quill.js"></script>
 </head>
 <body>
     <nav class="container-fluid">

@@ -1,59 +1,96 @@
 class DialogueFormatter {
     constructor(quill) {
         this.quill = quill;
-        this.setupKeyboardHandling();
+        this.lastKey = null;
+        this.setupEventListeners();
     }
 
-    setupKeyboardHandling() {
-        this.quill.keyboard.addBinding({
-            key: ' ',
-            shortKey: false,
-            handler: (range, context) => {
-                return this.handleSpacePress(range, context);
+    setupEventListeners() {
+        this.quill.root.addEventListener('keydown', (e) => {
+            this.lastKey = e.key;
+        });
+
+        this.quill.on('text-change', (delta, oldDelta, source) => {
+            if (source === 'user' && this.lastKey === ' ') {
+                this.checkForDialogue();
             }
         });
     }
 
-    handleSpacePress(range, context) {
-        // Проверяем, достаточно ли символов для проверки
-        if (range.index < 2) return true;
-        
-        // Получаем текст от начала строки до текущей позиции
-        const lineStart = this.getLineStart(range.index);
-        const textBeforeCursor = this.quill.getText(lineStart, range.index - lineStart);
-        
-        // Проверяем, начинается ли строка с "-" и пробел будет первым пробелом после дефиса
-        if (this.isBeginningOfLine(lineStart, range.index) && 
-            textBeforeCursor === '-') {
-            
-            // Сохраняем текущую позицию курсора
-            const savedPosition = range.index;
-            
-            // Заменяем дефис на тире, сохраняя пробел
-            this.quill.deleteText(range.index - 1, 2, 'user');
-            this.quill.insertText(range.index - 1, '— ', 'user');
-            
-            // Восстанавливаем курсор после пробела
-            setTimeout(() => {
-                this.quill.setSelection(savedPosition + 2, 0, 'silent');
-            }, 0);
-            
-            return true; // Разрешаем стандартную обработку пробела
-        }
-        
-        return true;
-    }
-
     getLineStart(index) {
         let lineStart = index;
-        while (lineStart > 0 && this.quill.getText(lineStart - 1, 1) !== '\n') {
+        // Безопасный поиск начала строки (защита от отрицательных индексов)
+        while (lineStart > 0) {
+            const prevChar = this.quill.getText(lineStart - 1, 1);
+            if (prevChar === '\n') break;
             lineStart--;
         }
         return lineStart;
     }
 
-    isBeginningOfLine(lineStart, currentIndex) {
-        return currentIndex === lineStart + 1;
+    checkForDialogue() {
+        const selection = this.quill.getSelection();
+        // Защита от некорректных позиций курсора
+        if (!selection || selection.index < 2) return;
+
+        const lineStart = this.getLineStart(selection.index);
+        const charsFromStart = selection.index - lineStart;
+
+        // Работаем ТОЛЬКО когда:
+        // 1. Ровно 2 символа от начала строки до курсора
+        // 2. Эти символы - "- "
+        if (charsFromStart !== 2) return;
+
+        const text = this.quill.getText(lineStart, 2);
+        if (text !== '- ') return;
+
+        // Атомарная операция замены
+        this.quill.updateContents([
+            { retain: lineStart },
+            { delete: 2 },          // Удаляем "- "
+            { insert: '— ' }        // Вставляем "— "
+        ], 'user');
+
+        // Явно устанавливаем курсор ПОСЛЕ пробела
+        this.quill.setSelection(lineStart + 2, 0, 'silent');
+    }
+
+    // Простой метод для форматирования диалогов
+    formatSelectionAsDialogue() {
+        const range = this.quill.getSelection();
+        if (!range || range.length === 0) return;
+
+        const selectedText = this.quill.getText(range.index, range.length);
+        
+        // Простая замена всех "- " на "— " в выделенном тексте
+        const formattedText = selectedText.replace(/(^|\n)- /g, '$1— ');
+        
+        if (formattedText !== selectedText) {
+            this.quill.deleteText(range.index, range.length, 'user');
+            this.quill.insertText(range.index, formattedText, 'user');
+            
+            // Восстанавливаем выделение
+            this.quill.setSelection(range.index, formattedText.length, 'silent');
+        }
+    }
+
+    // Простой метод для отмены форматирования диалогов
+    unformatSelectionAsDialogue() {
+        const range = this.quill.getSelection();
+        if (!range || range.length === 0) return;
+
+        const selectedText = this.quill.getText(range.index, range.length);
+        
+        // Простая замена всех "— " на "- " в выделенном тексте
+        const unformattedText = selectedText.replace(/(^|\n)— /g, '$1- ');
+        
+        if (unformattedText !== selectedText) {
+            this.quill.deleteText(range.index, range.length, 'user');
+            this.quill.insertText(range.index, unformattedText, 'user');
+            
+            // Восстанавливаем выделение
+            this.quill.setSelection(range.index, unformattedText.length, 'silent');
+        }
     }
 }
 
@@ -71,33 +108,45 @@ class WriterEditor {
         this.quill = new Quill(this.editorContainer, {
             theme: 'snow',
             modules: {
-                toolbar: [
-                    [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
-                    ['bold','italic','underline','strike'],
-                    [{ 'align': [] }],
-                    [{ 'color': [] }, { 'background': [] }], 
-                    ['blockquote','code-block'],
-                    [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-                    [{ 'script': 'sub'}, { 'script': 'super' }],
-                    [{ 'indent': '-1'}, { 'indent': '+1' }],
-                    [{ 'size': ['small', false, 'large', 'huge'] }],
-                    [{ 'font': [] }],
-                    ['link','image','video'],
-                    ['clean'],
-                ],
+                toolbar: {
+                    container: [
+                        [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
+                        ['bold','italic','underline','strike'],
+                        [{ 'align': [] }],
+                        [{ 'color': [] }, { 'background': [] }], 
+                        ['blockquote','code-block'],
+                        [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+                        [{ 'script': 'sub'}, { 'script': 'super' }],
+                        [{ 'indent': '-1'}, { 'indent': '+1' }],
+                        ['dialogue', 'undodialogue'],
+                        [{ 'size': ['small', false, 'large', 'huge'] }],
+                        [{ 'font': [] }],
+                        ['link','image','video'],
+                        ['clean'],
+                    ],
+                    handlers: {
+                        'dialogue': () => {
+                            if (this.dialogueFormatter) {
+                                this.dialogueFormatter.formatSelectionAsDialogue();
+                            }
+                        },
+                        'undodialogue': () => {
+                            if (this.dialogueFormatter) {
+                                this.dialogueFormatter.unformatSelectionAsDialogue();
+                            }
+                        }
+                    }
+                },
                 history: { delay: 1000, maxStack: 100, userOnly: true },
                 keyboard: {
                     bindings: {
-                        // Отключаем автоформатирование списков для дефиса с пробелом
                         'list autofill': {
                             key: ' ',
                             format: ['list'],
                             handler: function(range, context) {
-                                // Если это начало строки с дефисом - не создаем список
                                 if (context.prefix && context.prefix.trim() === '-') {
-                                    return true; // Пропускаем автоформатирование
+                                    return true;
                                 }
-                                // Стандартная обработка для других случаев
                                 return Quill.import('modules/keyboard').bindings['list autofill'].handler.call(this, range, context);
                             }
                         }
@@ -107,8 +156,11 @@ class WriterEditor {
             placeholder: 'Введите текст главы...'
         });
 
+        // Добавляем кастомные кнопки в тулбар после инициализации Quill
+        this.addCustomButtonsToToolbar();
+
         // Инициализируем автоформатер диалогов
-        new DialogueFormatter(this.quill);
+        this.dialogueFormatter = new DialogueFormatter(this.quill);
 
         // Загружаем текст
         const rawContent = this.editorContainer.dataset.content || '';
@@ -132,7 +184,29 @@ class WriterEditor {
         window.quillTextarea = this.textarea;
     }
 
-    // Форматирование уже существующих диалогов при загрузке
+    addCustomButtonsToToolbar() {
+        // Находим тулбар Quill
+        const toolbar = this.quill.container.previousSibling;
+        if (!toolbar) return;
+
+        // Находим кнопки по классам Quill
+        const dialogueBtn = toolbar.querySelector('.ql-dialogue');
+        const undoDialogueBtn = toolbar.querySelector('.ql-undodialogue');
+        
+        // Заменяем содержимое кнопок на наши символы
+        if (dialogueBtn) {
+            dialogueBtn.innerHTML = '—';
+            dialogueBtn.title = 'Форматировать диалоги (—)';
+            dialogueBtn.style.fontWeight = 'bold';
+        }
+        
+        if (undoDialogueBtn) {
+            undoDialogueBtn.innerHTML = '-';
+            undoDialogueBtn.title = 'Убрать форматирование диалогов (-)';
+            undoDialogueBtn.style.fontWeight = 'bold';
+        }
+    }
+
     formatExistingDialogues() {
         const text = this.quill.getText();
         const lines = text.split('\n');
@@ -140,15 +214,13 @@ class WriterEditor {
         let totalOffset = 0;
         lines.forEach((line, index) => {
             if (line.startsWith('- ')) {
-                // Находим позицию для замены
                 const replacePosition = totalOffset;
                 
-                // Заменяем дефис на тире
                 this.quill.deleteText(replacePosition, 1, 'silent');
                 this.quill.insertText(replacePosition, '—', 'silent');
             }
             
-            totalOffset += line.length + 1; // +1 для символа новой строки
+            totalOffset += line.length + 1;
         });
     }
 }

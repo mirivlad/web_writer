@@ -1,0 +1,6 @@
+*.log
+.env
+config/config.php
+*.lock
+uploads/*
+vendor/composer

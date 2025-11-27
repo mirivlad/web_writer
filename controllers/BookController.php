@@ -268,9 +268,12 @@ class BookController extends BaseController {
     }
     
     public function viewAll($id) {
+        $this->requireLogin();
+        $user_id = $_SESSION['user_id'];
+
         $bookModel = new Book($this->pdo);
         $chapterModel = new Chapter($this->pdo);
-        $book = $bookModel->findById($id);
+        $book = $bookModel->findByUserBook($id, $user_id);
         if (!$book) {
             http_response_code(404);
             $this->render('errors/404');

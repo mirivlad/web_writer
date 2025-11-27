@@ -12,6 +12,11 @@ class Book {
         $stmt->execute([$id]);
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
+    public function findByUserBook($id, $user_id) {
+        $stmt = $this->pdo->prepare("SELECT * FROM books WHERE id = ? AND user_id=?");
+        $stmt->execute([$id, $user_id]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
     
     public function findByShareToken($share_token) {
         $stmt = $this->pdo->prepare("SELECT * FROM books WHERE share_token = ?");

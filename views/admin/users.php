@@ -4,7 +4,12 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h1 class="h2">Управление пользователями</h1>
-            <p class="text-muted mb-0">Всего пользователей: <?= count($users) ?></p>
+            <p class="text-muted mb-0">
+                Всего пользователей: <?= $total_users ?>
+                <?php if ($total_users > 0): ?>
+                    | Показано <?= (($current_page - 1) * $per_page) + 1 ?>-<?= min($current_page * $per_page, $total_users) ?>
+                <?php endif; ?>
+            </p>
         </div>
         <a href="<?= SITE_URL ?>/admin/add-user" class="btn btn-primary">
             <i class="bi bi-person-plus"></i> Добавить пользователя
@@ -26,6 +31,30 @@
             <?php unset($_SESSION['error']); ?>
         </div>
     <?php endif; ?>
+
+    <!-- Выбор количества элементов на странице -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3 align-items-center">
+                <div class="col-auto">
+                    <label for="per_page" class="col-form-label">Показывать по:</label>
+                </div>
+                <div class="col-auto">
+                    <select name="per_page" id="per_page" class="form-select" onchange="this.form.submit()">
+                        <?php foreach ($allowed_per_page as $value): ?>
+                            <option value="<?= $value ?>" <?= $per_page == $value ? 'selected' : '' ?>>
+                                <?= $value ?> пользователей
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="col-auto">
+                    <input type="hidden" name="page" value="1">
+                    <button type="submit" class="btn btn-outline-primary">Применить</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <?php if (empty($users)): ?>
         <div class="text-center py-5">
@@ -111,7 +140,66 @@
                 </div>
             </div>
         </div>
+
+        <!-- Пагинация -->
+        <?php if (!empty($pagination)): ?>
+        <nav aria-label="Навигация по страницам" class="mt-4">
+            <ul class="pagination justify-content-center">
+                <!-- Кнопка "Назад" -->
+                <li class="page-item <?= $current_page <= 1 ? 'disabled' : '' ?>">
+                    <a class="page-link" href="?page=<?= $current_page - 1 ?>&per_page=<?= $per_page ?>" aria-label="Предыдущая">
+                        <span aria-hidden="true">&laquo;</span>
+                    </a>
+                </li>
+
+                <!-- Элементы пагинации -->
+                <?php foreach ($pagination as $item): ?>
+                    <?php if ($item['type'] === 'ellipsis'): ?>
+                        <li class="page-item disabled">
+                            <span class="page-link"><?= $item['label'] ?></span>
+                        </li>
+                    <?php else: ?>
+                        <li class="page-item <?= $item['active'] ? 'active' : '' ?>">
+                            <a class="page-link" href="?page=<?= $item['page'] ?>&per_page=<?= $per_page ?>">
+                                <?= $item['label'] ?>
+                            </a>
+                        </li>
+                    <?php endif; ?>
+                <?php endforeach; ?>
+
+                <!-- Кнопка "Вперед" -->
+                <li class="page-item <?= $current_page >= $total_pages ? 'disabled' : '' ?>">
+                    <a class="page-link" href="?page=<?= $current_page + 1 ?>&per_page=<?= $per_page ?>" aria-label="Следующая">
+                        <span aria-hidden="true">&raquo;</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+
+        <!-- Информация о странице -->
+        <div class="text-center mt-3">
+            <p class="text-muted">
+                Страница <?= $current_page ?> из <?= $total_pages ?>
+                <?php if ($total_pages > 1): ?>
+                    | Перейти: 
+                    <form method="get" class="d-inline">
+                        <input type="hidden" name="per_page" value="<?= $per_page ?>">
+                        <input type="number" name="page" min="1" max="<?= $total_pages ?>" value="<?= $current_page ?>" 
+                               class="form-control d-inline-block" style="width: 80px;" 
+                               onchange="this.form.submit()">
+                    </form>
+                <?php endif; ?>
+            </p>
+        </div>
+        <?php endif; ?>
     <?php endif; ?>
 </div>
 
+
+<style>
+.form-control[type="number"] {
+    display: inline-block;
+    width: auto;
+}
+</style>
 <?php include 'views/layouts/footer.php'; ?>

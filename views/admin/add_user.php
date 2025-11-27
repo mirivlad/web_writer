@@ -3,7 +3,7 @@
 <div class="container">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1 class="h2">Добавление пользователя</h1>
-        <a href="<?= SITE_URL ?>/admin/users" class="btn btn-outline-secondary">
+        <a href="<?= SITE_URL ?>/admin/users?page=<?= $return_page ?? 1 ?>&per_page=<?= $return_per_page ?? 10 ?>" class="btn btn-outline-secondary">
             <i class="bi bi-arrow-left"></i> Назад к пользователям
         </a>
     </div>

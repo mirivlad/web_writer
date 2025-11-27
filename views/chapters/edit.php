@@ -1,4 +1,3 @@
-// views/chapters/edit.php
 <?php
 // views/chapters/edit.php
 include 'views/layouts/header.php';
@@ -107,7 +106,7 @@ include 'views/layouts/header.php';
                     <div class="alert alert-info mt-3">
                         <small>
                             <i class="bi bi-info-circle"></i> 
-                            Автосохранение включено. Изменения сохраняются автоматически каждые 2 минуты.
+                            Автосохранение включено. Изменения сохраняются автоматически каждые 30 сек.
                         </small>
                     </div>
                 </div>

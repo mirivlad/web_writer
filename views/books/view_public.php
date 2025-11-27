@@ -111,7 +111,7 @@ include 'views/layouts/header.php';
                         <?php foreach ($chapters as $index => $chapter): ?>
                             <div class="chapter-content mb-5" id="chapter-<?= $chapter['id'] ?>">
                                 <h2 class="border-bottom pb-2 mb-4">
-                                    Глава <?= $index + 1 ?>: <?= e($chapter['title']) ?>
+                                    <?= e($chapter['title']) ?>
                                 </h2>
                                 
                                 <div class="chapter-text" style="line-height: 1.8; font-size: 1.1em;">

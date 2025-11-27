@@ -4,7 +4,7 @@ include 'views/layouts/header.php';
 ?>
 
 <div class="container py-4">
-    <div class="row justify-content-center">
+    <div class="row">
         <div class="col-lg-10">
             <article class="card border-0 shadow-sm">
                 <div class="card-body p-4">
@@ -34,7 +34,7 @@ include 'views/layouts/header.php';
                         <?php endif; ?>
                         
                         <?php if (!empty($book['description'])): ?>
-                            <div class="bg-light p-4 rounded mb-4">
+                            <div class="text-start bg-light p-4 rounded mb-4 ">
                                 <?= nl2br(e($book['description'])) ?>
                             </div>
                         <?php endif; ?>
@@ -97,7 +97,7 @@ include 'views/layouts/header.php';
                                     <a href="#chapter-<?= $chapter['id'] ?>" class="list-group-item list-group-item-action border-0">
                                         <div class="d-flex justify-content-between align-items-center">
                                             <span>
-                                                <strong>Глава <?= $index + 1 ?>:</strong> <?= e($chapter['title']) ?>
+                                                <strong><?= e($chapter['title']) ?></strong>
                                             </span>
                                             <small class="text-muted"><?= $chapter['word_count'] ?> слов</small>
                                         </div>

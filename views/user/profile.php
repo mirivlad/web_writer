@@ -3,139 +3,139 @@
 include 'views/layouts/header.php';
 ?>
 
-<h1>Мой профиль</h1>
-
-<?php if ($message): ?>
-    <div class="alert <?= strpos($message, 'Ошибка') !== false ? 'alert-error' : 'alert-success' ?>">
-        <?= e($message) ?>
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h2">Мой профиль</h1>
+        <a href="<?= SITE_URL ?>/dashboard" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Назад в панель
+        </a>
     </div>
-<?php endif; ?>
 
-<div class="grid">
-    <article>
-        <h2>Основная информация</h2>
-        <form method="post" enctype="multipart/form-data">
-            <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
-            
-            <div style="margin-bottom: 1rem;">
-                <label for="username" style="display: block; margin-bottom: 0.5rem; font-weight: bold;">
-                    Имя пользователя (нельзя изменить)
-                </label>
-                <input type="text" id="username" value="<?= e($user['username']) ?>" disabled style="width: 100%;">
-            </div>
-            
-            <div style="margin-bottom: 1rem;">
-                <label for="display_name" style="display: block; margin-bottom: 0.5rem; font-weight: bold;">
-                    Отображаемое имя *
-                </label>
-                <input type="text" id="display_name" name="display_name" 
-                       value="<?= e($user['display_name'] ?? $user['username']) ?>" 
-                       style="width: 100%;" required>
-            </div>
-            
-            <div style="margin-bottom: 1.5rem;">
-                <label for="email" style="display: block; margin-bottom: 0.5rem; font-weight: bold;">
-                    Email
-                </label>
-                <input type="email" id="email" name="email" 
-                       value="<?= e($user['email'] ?? '') ?>" 
-                       style="width: 100%;">
-            </div>
-            
-            <div style="margin-bottom: 1.5rem;">
-                <label for="bio" style="display: block; margin-bottom: 0.5rem; font-weight: bold;">
-                    О себе (отображается на вашей публичной странице)
-                </label>
-                <textarea id="bio" name="bio" 
-                          placeholder="Расскажите о себе, своих интересах, стиле письма..."
-                          rows="6"
-                          style="width: 100%;"><?= e($user['bio'] ?? '') ?></textarea>
-                <small style="color: var(--muted-color);">
-                    Поддерживается Markdown форматирование
-                </small>
-            </div>
-            
-            <div class="profile-buttons">
-                <button type="submit" class="profile-button primary">
-                    💾 Сохранить изменения
-                </button>
-                <a href="<?= SITE_URL ?>/dashboard" class="profile-button secondary">
-                    ↩️ Назад
-                </a>
-            </div>
-        </form>
-    </article>
-    
-    <article>
-        <h2>Аватарка</h2>
-        
-        <div style="text-align: center; margin-bottom: 1.5rem;">
-            <?php if (!empty($user['avatar'])): ?>
-                <img src="<?= AVATARS_URL . e($user['avatar']) ?>" 
-                     alt="Аватарка" 
-                     style="max-width: 200px; height: auto; border-radius: 50%; border: 3px solid var(--primary);"
-                     onerror="this.style.display='none'">
-            <?php else: ?>
-                <div style="width: 200px; height: 200px; border-radius: 50%; background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%); display: flex; align-items: center; justify-content: center; color: white; font-size: 4rem; margin: 0 auto;">
-                    <?= mb_substr(e($user['display_name'] ?? $user['username']), 0, 1) ?>
-                </div>
-            <?php endif; ?>
+    <?php if ($message): ?>
+        <div class="alert <?= strpos($message, 'Ошибка') !== false ? 'alert-danger' : 'alert-success' ?>">
+            <?= e($message) ?>
         </div>
-        
-        <form method="post" enctype="multipart/form-data">
-            <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
-            
-            <div style="margin-bottom: 1rem;">
-                <label for="avatar" style="display: block; margin-bottom: 0.5rem; font-weight: bold;">
-                    Загрузить новую аватарку
-                </label>
-                <input type="file" id="avatar" name="avatar" 
-                       accept="image/jpeg, image/png, image/gif, image/webp"
-                       style="height: 2.6rem;">
-                <small style="color: var(--muted-color);">
-                    Разрешены: JPG, PNG, GIF, WebP. Максимальный размер: 2MB.
-                    Рекомендуемый размер: 200×200 пикселей.
-                </small>
-                
-                <?php if (!empty($avatar_error)): ?>
-                    <div style="color: #d32f2f; margin-top: 0.5rem;">
-                        ❌ <?= e($avatar_error) ?>
-                    </div>
-                <?php endif; ?>
-            </div>
-            
-            <div style="display: flex; gap: 10px;">
-                <button type="submit" class="contrast" style="flex: 1;">
-                    📤 Загрузить аватарку
-                </button>
-                
-                <?php if (!empty($user['avatar'])): ?>
-                    <button type="submit" name="delete_avatar" value="1" class="secondary" style="flex: 1; background: #ff4444; border-color: #ff4444; color: white;">
-                        🗑️ Удалить аватарку
-                    </button>
-                <?php endif; ?>
-            </div>
-        </form>
-        
-        <?php if (!empty($user['avatar'])): ?>
-            <div style="margin-top: 1rem; padding: 1rem; background: var(--card-background-color); border-radius: 5px;">
-                <p style="margin: 0; font-size: 0.9em; color: var(--muted-color);">
-                    <strong>Примечание:</strong> Аватарка отображается на вашей публичной странице автора
-                </p>
-            </div>
-        <?php endif; ?>
-    </article>
-</div>
-
-<article>
-    <h3>Информация об аккаунте</h3>
-    <p><a href="<?= SITE_URL ?>/author/<?= $_SESSION['user_id'] ?>" target="_blank" class="adaptive-button secondary">
-        👁️ Посмотреть мою публичную страницу
-    </a></p>
-    <p><strong>Дата регистрации:</strong> <?= date('d.m.Y H:i', strtotime($user['created_at'])) ?></p>
-    <?php if ($user['last_login']): ?>
-        <p><strong>Последний вход:</strong> <?= date('d.m.Y H:i', strtotime($user['last_login'])) ?></p>
     <?php endif; ?>
-</article>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Основная информация</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data">
+                        <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
+                        
+                        <div class="mb-3">
+                            <label for="username" class="form-label">Имя пользователя (нельзя изменить)</label>
+                            <input type="text" class="form-control" id="username" value="<?= e($user['username']) ?>" disabled>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="display_name" class="form-label">Отображаемое имя *</label>
+                            <input type="text" class="form-control" id="display_name" name="display_name" 
+                                   value="<?= e($user['display_name'] ?? $user['username']) ?>" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Email</label>
+                            <input type="email" class="form-control" id="email" name="email" 
+                                   value="<?= e($user['email'] ?? '') ?>">
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label for="bio" class="form-label">О себе</label>
+                            <textarea class="form-control" id="bio" name="bio" 
+                                      placeholder="Расскажите о себе, своих интересах, стиле письма..."
+                                      rows="6"><?= e($user['bio'] ?? '') ?></textarea>
+                            <div class="form-text">
+                                Отображается на вашей публичной странице. Поддерживается Markdown форматирование.
+                            </div>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle"></i> Сохранить изменения
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Аватарка</h5>
+                </div>
+                <div class="card-body text-center">
+                    <?php if (!empty($user['avatar'])): ?>
+                        <img src="<?= AVATARS_URL . e($user['avatar']) ?>" 
+                             alt="Аватарка" 
+                             class="rounded-circle mb-3 border border-3 border-primary"
+                             style="width: 150px; height: 150px; object-fit: cover;"
+                             onerror="this.style.display='none'">
+                    <?php else: ?>
+                        <div class="rounded-circle bg-primary bg-gradient d-flex align-items-center justify-content-center mx-auto mb-3"
+                             style="width: 150px; height: 150px;">
+                            <span class="text-white fw-bold fs-2">
+                                <?= mb_substr(e($user['display_name'] ?? $user['username']), 0, 1) ?>
+                            </span>
+                        </div>
+                    <?php endif; ?>
+                    
+                    <form method="post" enctype="multipart/form-data">
+                        <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
+                        
+                        <div class="mb-3">
+                            <label for="avatar" class="form-label">Загрузить новую аватарку</label>
+                            <input type="file" class="form-control" id="avatar" name="avatar" 
+                                   accept="image/jpeg, image/png, image/gif, image/webp">
+                            <div class="form-text">
+                                Разрешены: JPG, PNG, GIF, WebP. Максимальный размер: 2MB.
+                            </div>
+                            
+                            <?php if (!empty($avatar_error)): ?>
+                                <div class="alert alert-danger mt-2">
+                                    <i class="bi bi-exclamation-triangle"></i> <?= e($avatar_error) ?>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-upload"></i> Загрузить аватарку
+                            </button>
+                            
+                            <?php if (!empty($user['avatar'])): ?>
+                                <button type="submit" name="delete_avatar" value="1" class="btn btn-outline-danger">
+                                    <i class="bi bi-trash"></i> Удалить аватарку
+                                </button>
+                            <?php endif; ?>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Информация об аккаунте</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <a href="<?= SITE_URL ?>/author/<?= $_SESSION['user_id'] ?>" target="_blank" class="btn btn-outline-primary w-100">
+                            <i class="bi bi-eye"></i> Посмотреть публичную страницу
+                        </a>
+                    </div>
+                    <p><strong>Дата регистрации:</strong><br>
+                    <small class="text-muted"><?= date('d.m.Y H:i', strtotime($user['created_at'])) ?></small></p>
+                    <?php if ($user['last_login']): ?>
+                        <p><strong>Последний вход:</strong><br>
+                        <small class="text-muted"><?= date('d.m.Y H:i', strtotime($user['last_login'])) ?></small></p>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
 <?php include 'views/layouts/footer.php'; ?>

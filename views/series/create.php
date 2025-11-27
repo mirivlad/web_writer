@@ -3,56 +3,70 @@
 include 'views/layouts/header.php';
 ?>
 
-<h1>Создание новой серии</h1>
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h2">Создание новой серии</h1>
+                <a href="<?= SITE_URL ?>/series" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> Назад к сериям
+                </a>
+            </div>
 
-<?php if (isset($error) && $error): ?>
-    <div class="alert alert-error">
-        <?= e($error) ?>
-    </div>
-<?php endif; ?>
+            <?php if (isset($error) && $error): ?>
+                <div class="alert alert-danger">
+                    <?= e($error) ?>
+                </div>
+            <?php endif; ?>
 
-<form method="post">
-    <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
-    
-    <div style="max-width: 100%; margin-bottom: 1rem;">
-        <label for="title" style="display: block; margin-bottom: 0.5rem; font-weight: bold;">
-            Название серии *
-        </label>
-        <input type="text" id="title" name="title" 
-               value="<?= e($_POST['title'] ?? '') ?>" 
-               placeholder="Введите название серии" 
-               style="width: 100%; margin-bottom: 1.5rem;" 
-               required>
-        
-        <label for="description" style="display: block; margin-bottom: 0.5rem; font-weight: bold;">
-            Описание серии
-        </label>
-        <textarea id="description" name="description" 
-                  placeholder="Описание сюжета серии, общая концепция..." 
-                  rows="6"
-                  style="width: 100%;"><?= e($_POST['description'] ?? '') ?></textarea>
-    </div>
-    
-    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-        <button type="submit" class="contrast">
-            📚 Создать серию
-        </button>
-        
-        <a href="<?= SITE_URL ?>/series" role="button" class="secondary">
-            ❌ Отмена
-        </a>
-    </div>
-</form>
+            <div class="card">
+                <div class="card-body">
+                    <form method="post">
+                        <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
+                        
+                        <div class="mb-3">
+                            <label for="title" class="form-label">Название серии *</label>
+                            <input type="text" class="form-control" id="title" name="title" 
+                                   value="<?= e($_POST['title'] ?? '') ?>" 
+                                   placeholder="Введите название серии" required>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label for="description" class="form-label">Описание серии</label>
+                            <textarea class="form-control" id="description" name="description" 
+                                      placeholder="Описание сюжета серии, общая концепция..." 
+                                      rows="6"><?= e($_POST['description'] ?? '') ?></textarea>
+                        </div>
+                        
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-collection"></i> Создать серию
+                            </button>
+                            
+                            <a href="<?= SITE_URL ?>/series" class="btn btn-outline-danger">
+                                <i class="bi bi-x-circle"></i> Отмена
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
 
-<div style="margin-top: 2rem; padding: 1rem; background: var(--card-background-color); border-radius: 5px;">
-    <h3>Что такое серия?</h3>
-    <p>Серия позволяет объединить несколько книг в одну тематическую коллекцию. Это полезно для:</p>
-    <ul>
-        <li>Циклов книг с общим сюжетом</li>
-        <li>Книг в одном мире или вселенной</li>
-        <li>Организации книг по темам или жанрам</li>
-    </ul>
-    <p>Вы сможете добавить книги в серию после её создания.</p>
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Что такое серия?</h5>
+                </div>
+                <div class="card-body">
+                    <p>Серия позволяет объединить несколько книг в одну тематическую коллекцию. Это полезно для:</p>
+                    <ul>
+                        <li>Циклов книг с общим сюжетом</li>
+                        <li>Книг в одном мире или вселенной</li>
+                        <li>Организации книг по темам или жанрам</li>
+                    </ul>
+                    <p>Вы сможете добавить книги в серию после её создания.</p>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <?php include 'views/layouts/footer.php'; ?>

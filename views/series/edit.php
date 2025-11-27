@@ -2,115 +2,147 @@
 include 'views/layouts/header.php';
 ?>
 
-<h1>Редактирование серии: <?= e($series['title']) ?></h1>
-<article>
-            <h2>Основная информация</h2>
-            <form method="post" action="/series/<?= $series['id'] ?>/edit">
-                <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
-                
-                <label for="title">
-                    Название серии *
-                    <input type="text" id="title" name="title" value="<?= e($series['title']) ?>" required>
-                </label>
-                
-                <label for="description">
-                    Описание серии
-                    <textarea id="description" name="description" rows="4"><?= e($series['description'] ?? '') ?></textarea>
-                </label>
-                
-                <button type="submit" class="primary-btn">Сохранить изменения</button>
-            </form>
-</article>
-<div class="grid">
-    <div>
-        
-
-        <article>
-            <h2>Добавить книгу в серию</h2>
-            <?php if (!empty($available_books)): ?>
-                <form method="post" action="/series/<?= $series['id'] ?>/add-book">
-                    <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
-                    <label for="book_id">
-                        Выберите книгу
-                        <select id="book_id" name="book_id" required>
-                            <option value="">-- Выберите книгу --</option>
-                            <?php foreach ($available_books as $book): ?>
-                                <option value="<?= $book['id'] ?>"><?= e($book['title']) ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </label>
-                    <label for="sort_order">
-                        Порядковый номер в серии
-                        <input type="number" id="sort_order" name="sort_order" value="<?= count($books_in_series) + 1 ?>" min="1">
-                    </label>
-                    <button type="submit" class="secondary-btn">Добавить в серию</button>
-                </form>
-            <?php else: ?>
-                <p>Все ваши книги уже добавлены в эту серию или у вас нет доступных книг.</p>
-                <a href="/books/create" class="primary-btn" role="button">Создать новую книгу</a>
-            <?php endif; ?>
-        </article>
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h2">Редактирование серии: <?= e($series['title']) ?></h1>
+        <a href="<?= SITE_URL ?>/series" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Назад к сериям
+        </a>
     </div>
-    
-    <div>
-        <article>
-            <h2>Книги в серии (<?= count($books_in_series) ?>)</h2>
-            
-            <?php if (!empty($books_in_series)): ?>
-                <div id="series-books-list">
-                    <form id="reorder-form" method="post" action="/series/<?= $series['id'] ?>/update-order">
+
+    <div class="row">
+        <div class="col-lg-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Основная информация</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" action="/series/<?= $series['id'] ?>/edit">
                         <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
                         
-                        <div class="books-list">
-                            <?php foreach ($books_in_series as $index => $book): ?>
-                                <div class="book-item" data-book-id="<?= $book['id'] ?>">
-                                    <div class="book-drag-handle" style="cursor: move;">☰</div>
-                                    <div class="book-info">
-                                        <strong><?= e($book['title']) ?></strong>
-                                        <small>Порядок: <?= $book['sort_order_in_series'] ?></small>
-                                    </div>
-                                    <div class="book-actions" style="display: grid; min-width: 2rem; margin-top: 1rem;">
-                                        <a href="/books/<?= $book['id'] ?>/edit" class="compact-button" role="button" style="margin-top: 0em;">✏️</a>
-                                        <form method="post" action="/series/<?= $series['id'] ?>/remove-book/<?= $book['id'] ?>" 
-                                              style="display: inline;" onsubmit="return confirm('Удалить книгу из серии?')">
-                                            <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
-                                            <button type="submit" class="compact-button red-btn" style="margin-top: 0em;">🗑️</button>
-                                        </form>
-                                    </div>
-                                    <input type="hidden" name="order[]" value="<?= $book['id'] ?>">
-                                </div>
-                            <?php endforeach; ?>
+                        <div class="mb-3">
+                            <label for="title" class="form-label">Название серии *</label>
+                            <input type="text" class="form-control" id="title" name="title" 
+                                   value="<?= e($series['title']) ?>" required>
                         </div>
                         
-                        <button type="submit" class="secondary-btn" id="save-order-btn" style="display: none;">
-                            Сохранить порядок
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Описание серии</label>
+                            <textarea class="form-control" id="description" name="description" 
+                                      rows="4"><?= e($series['description'] ?? '') ?></textarea>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle"></i> Сохранить изменения
                         </button>
                     </form>
                 </div>
-            <?php else: ?>
-                <p>В этой серии пока нет книг. Добавьте книги с помощью формы слева.</p>
-            <?php endif; ?>
-        </article>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Добавить книгу в серию</h5>
+                </div>
+                <div class="card-body">
+                    <?php if (!empty($available_books)): ?>
+                        <form method="post" action="/series/<?= $series['id'] ?>/add-book">
+                            <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
+                            
+                            <div class="mb-3">
+                                <label for="book_id" class="form-label">Выберите книгу</label>
+                                <select class="form-select" id="book_id" name="book_id" required>
+                                    <option value="">-- Выберите книгу --</option>
+                                    <?php foreach ($available_books as $book): ?>
+                                        <option value="<?= $book['id'] ?>"><?= e($book['title']) ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="sort_order" class="form-label">Порядковый номер в серии</label>
+                                <input type="number" class="form-control" id="sort_order" name="sort_order" 
+                                       value="<?= count($books_in_series) + 1 ?>" min="1">
+                            </div>
+                            
+                            <button type="submit" class="btn btn-outline-primary">
+                                <i class="bi bi-plus-circle"></i> Добавить в серию
+                            </button>
+                        </form>
+                    <?php else: ?>
+                        <div class="text-center py-3">
+                            <i class="bi bi-journal-bookmark fs-1 text-muted"></i>
+                            <p class="text-muted mt-2">Все ваши книги уже добавлены в эту серию или у вас нет доступных книг.</p>
+                            <a href="/books/create" class="btn btn-primary">Создать новую книгу</a>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Книги в серии (<?= count($books_in_series) ?>)</h5>
+                </div>
+                <div class="card-body">
+                    <?php if (!empty($books_in_series)): ?>
+                        <div id="series-books-list">
+                            <form id="reorder-form" method="post" action="/series/<?= $series['id'] ?>/update-order">
+                                <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
+                                
+                                <div class="books-list">
+                                    <?php foreach ($books_in_series as $index => $book): ?>
+                                        <div class="book-item border rounded p-3 mb-2 d-flex align-items-center" 
+                                             data-book-id="<?= $book['id'] ?>">
+                                            <div class="book-drag-handle text-muted me-3" style="cursor: move;">
+                                                <i class="bi bi-grip-vertical"></i>
+                                            </div>
+                                            <div class="book-info flex-grow-1">
+                                                <strong><?= e($book['title']) ?></strong>
+                                                <br>
+                                                <small class="text-muted">Порядок: <?= $book['sort_order_in_series'] ?></small>
+                                            </div>
+                                            <div class="book-actions ms-3">
+                                                <div class="btn-group btn-group-sm">
+                                                    <a href="/books/<?= $book['id'] ?>/edit" class="btn btn-outline-primary" title="Редактировать">
+                                                        <i class="bi bi-pencil"></i>
+                                                    </a>
+                                                    <form method="post" action="/series/<?= $series['id'] ?>/remove-book/<?= $book['id'] ?>" 
+                                                          onsubmit="return confirm('Удалить книгу из серии?')" class="d-inline">
+                                                        <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
+                                                        <button type="submit" class="btn btn-outline-danger" title="Удалить из серии">
+                                                            <i class="bi bi-trash"></i>
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                            <input type="hidden" name="order[]" value="<?= $book['id'] ?>">
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+                                
+                                <button type="submit" class="btn btn-outline-success w-100 mt-3" id="save-order-btn" style="display: none;">
+                                    <i class="bi bi-check-circle"></i> Сохранить порядок
+                                </button>
+                            </form>
+                        </div>
+                    <?php else: ?>
+                        <div class="text-center py-4">
+                            <i class="bi bi-journal-bookmark fs-1 text-muted"></i>
+                            <p class="text-muted mt-2">В этой серии пока нет книг.</p>
+                            <p class="text-muted small">Добавьте книги с помощью формы слева.</p>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
 <style>
-.books-list {
-    border: 1px solid #e0e0e0;
-    border-radius: 4px;
-}
-
 .book-item {
-    display: flex;
-    align-items: center;
-    padding: 10px;
-    border-bottom: 1px solid #f0f0f0;
-    background: white;
     transition: background-color 0.2s ease;
-}
-
-.book-item:last-child {
-    border-bottom: none;
+    background: white;
 }
 
 .book-item:hover {
@@ -126,29 +158,7 @@ include 'views/layouts/header.php';
 }
 
 .book-drag-handle {
-    padding: 0 10px;
-    color: #666;
     font-size: 1.2rem;
-}
-
-.book-info {
-    flex: 1;
-    padding: 0 10px;
-}
-
-.book-info strong {
-    display: block;
-    margin-bottom: 2px;
-}
-
-.book-info small {
-    color: #666;
-    font-size: 0.8rem;
-}
-
-.book-actions {
-    display: flex;
-    gap: 5px;
 }
 </style>
 
@@ -172,13 +182,6 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Автосохранение порядка через 2 секунды после изменения
     let saveTimeout;
-    saveOrderBtn.addEventListener('click', function(e) {
-        e.preventDefault();
-        clearTimeout(saveTimeout);
-        document.getElementById('reorder-form').submit();
-    });
-    
-    // Автоматическое сохранение при изменении порядка
     booksList.addEventListener('sortupdate', function() {
         clearTimeout(saveTimeout);
         saveTimeout = setTimeout(() => {

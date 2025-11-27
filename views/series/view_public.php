@@ -3,119 +3,132 @@
 include 'views/layouts/header.php';
 ?>
 
-<div class="container">
-    <article style="max-width: 800px; margin: 0 auto;">
-        <header style="text-align: center; margin-bottom: 2rem; border-bottom: 2px solid var(--muted-border-color); padding-bottom: 1rem;">
-            <h1 style="margin-bottom: 0.5rem;"><?= e($series['title']) ?></h1>
-            <p style="color: var(--muted-color); font-style: italic; margin-bottom: 0.5rem;">
-                Серия книг от 
-                <a href="<?= SITE_URL ?>/author/<?= $author['id'] ?>"><?= e($author['display_name'] ?: $author['username']) ?></a>
-            </p>
-            
-            <?php if ($series['description']): ?>
-                <div style="background: var(--card-background-color); padding: 1rem; border-radius: 5px; margin: 1rem 0; text-align: left;">
-                    <?= e($series['description']) ?>
-                </div>
-            <?php endif; ?>
-            
-            <div style="display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap; font-size: 0.9em; color: var(--muted-color);">
-                <span>Книг: <?= count($books) ?></span>
-                <span>Глав: <?= $total_chapters ?></span>
-                <span>Слов: <?= $total_words ?></span>
-            </div>
-        </header>
-
-        <?php if (empty($books)): ?>
-            <div style="text-align: center; padding: 3rem; background: var(--card-background-color); border-radius: 5px;">
-                <h3>В этой серии пока нет опубликованных книг</h3>
-                <p>Автор еще не опубликовал книги из этой серии</p>
-            </div>
-        <?php else: ?>
-            <div class="series-books">
-                <h2 style="text-align: center; margin-bottom: 2rem;">Книги серии</h2>
-                
-                <?php foreach ($books as $book): ?>
-                <article style="display: flex; gap: 1rem; align-items: flex-start; margin-bottom: 2rem; padding: 1rem; background: var(--card-background-color); border-radius: 8px;">
-                    <?php if ($book['cover_image']): ?>
-                        <div style="flex-shrink: 0;">
-                            <img src="<?= COVERS_URL . e($book['cover_image']) ?>" 
-                                 alt="<?= e($book['title']) ?>" 
-                                 style="max-width: 120px; height: auto; border-radius: 4px; border: 1px solid var(--border-color);"
-                                 onerror="this.style.display='none'">
-                        </div>
-                    <?php else: ?>
-                        <div style="flex-shrink: 0;">
-                            <div class="cover-placeholder" style="width: 120px; height: 160px; background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%); border-radius: 4px; display: flex; align-items: center; justify-content: center; color: white; font-size: 2rem;">
-                                📚
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <article class="card border-0 shadow-sm">
+                <div class="card-body p-4">
+                    <header class="text-center mb-5">
+                        <h1 class="display-5 mb-3"><?= e($series['title']) ?></h1>
+                        
+                        <p class="lead text-muted mb-3">
+                            Серия книг от 
+                            <a href="<?= SITE_URL ?>/author/<?= $author['id'] ?>" class="text-decoration-none">
+                                <?= e($author['display_name'] ?: $author['username']) ?>
+                            </a>
+                        </p>
+                        
+                        <?php if ($series['description']): ?>
+                            <div class="bg-light p-4 rounded mb-4">
+                                <?= e($series['description']) ?>
+                            </div>
+                        <?php endif; ?>
+                        
+                        <div class="d-flex justify-content-center gap-4 flex-wrap">
+                            <div class="text-center">
+                                <div class="h4 text-primary mb-0"><?= count($books) ?></div>
+                                <small class="text-muted">Книг</small>
+                            </div>
+                            <div class="text-center">
+                                <div class="h4 text-success mb-0"><?= $total_chapters ?></div>
+                                <small class="text-muted">Глав</small>
+                            </div>
+                            <div class="text-center">
+                                <div class="h4 text-warning mb-0"><?= $total_words ?></div>
+                                <small class="text-muted">Слов</small>
                             </div>
                         </div>
-                    <?php endif; ?>
-                    
-                    <div style="flex: 1;">
-                        <h3 style="margin-top: 0;">
-                            <?php if ($book['sort_order_in_series']): ?>
-                                <small style="color: var(--muted-color);">Книга <?= $book['sort_order_in_series'] ?></small><br>
-                            <?php endif; ?>
-                            <?= e($book['title']) ?>
-                        </h3>
-                        
-                        <?php if ($book['genre']): ?>
-                            <p style="color: var(--muted-color); margin: 0.5rem 0;"><em><?= e($book['genre']) ?></em></p>
-                        <?php endif; ?>
-                        
-                        <?php if ($book['description']): ?>
-                            <p style="margin-bottom: 1rem;"><?= nl2br(e($book['description'])) ?></p>
-                        <?php endif; ?>
-                        
-                        <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
-                            <a href="<?= SITE_URL ?>/book/<?= e($book['share_token']) ?>" class="adaptive-button">
-                                Читать
-                            </a>
-                            
-                            <?php
-                            $bookModel = new Book($pdo);
-                            $book_stats = $bookModel->getBookStats($book['id'], true);
-                            ?>
-                            
-                            <small style="color: var(--muted-color);">
-                                Глав: <?= $book_stats['chapter_count'] ?? 0 ?> | Слов: <?= $book_stats['total_words'] ?? 0 ?>
-                            </small>
-                        </div>
-                    </div>
-                </article>
-                <?php endforeach; ?>
-            </div>
-        <?php endif; ?>
+                    </header>
 
-        <footer style="margin-top: 3rem; padding-top: 1rem; border-top: 2px solid var(--muted-border-color); text-align: center;">
-            <p style="color: var(--muted-color);">
-                Серия создана в <?= e(APP_NAME) ?> • 
-                Автор: <a href="<?= SITE_URL ?>/author/<?= $author['id'] ?>"><?= e($author['display_name'] ?: $author['username']) ?></a>
-            </p>
-        </footer>
-    </article>
+                    <?php if (empty($books)): ?>
+                        <div class="text-center py-5">
+                            <i class="bi bi-collection fs-1 text-muted"></i>
+                            <h3 class="h4 text-muted mt-3">В этой серии пока нет опубликованных книг</h3>
+                            <p class="text-muted">Автор еще не опубликовал книги из этой серии</p>
+                        </div>
+                    <?php else: ?>
+                        <div class="mb-5">
+                            <h2 class="h3 text-center mb-4">
+                                <i class="bi bi-book"></i> Книги серии
+                            </h2>
+                            
+                            <?php foreach ($books as $book): ?>
+                            <div class="card mb-4">
+                                <div class="card-body">
+                                    <div class="row align-items-start">
+                                        <?php if ($book['cover_image']): ?>
+                                            <div class="col-md-3 text-center mb-3 mb-md-0">
+                                                <img src="<?= COVERS_URL . e($book['cover_image']) ?>" 
+                                                     alt="<?= e($book['title']) ?>" 
+                                                     class="img-fluid rounded shadow"
+                                                     style="max-height: 200px;"
+                                                     onerror="this.style.display='none'">
+                                            </div>
+                                            <div class="col-md-9">
+                                        <?php else: ?>
+                                            <div class="col-12">
+                                        <?php endif; ?>
+                                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                                <h3 class="h4">
+                                                    <?php if ($book['sort_order_in_series']): ?>
+                                                        <small class="text-muted">Книга <?= $book['sort_order_in_series'] ?></small><br>
+                                                    <?php endif; ?>
+                                                    <?= e($book['title']) ?>
+                                                </h3>
+                                            </div>
+                                            
+                                            <?php if ($book['genre']): ?>
+                                                <p class="text-muted mb-2"><em><?= e($book['genre']) ?></em></p>
+                                            <?php endif; ?>
+                                            
+                                            <?php if ($book['description']): ?>
+                                                <p class="mb-3"><?= nl2br(e($book['description'])) ?></p>
+                                            <?php endif; ?>
+                                            
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <div>
+                                                    <a href="<?= SITE_URL ?>/book/<?= e($book['share_token']) ?>" class="btn btn-primary">
+                                                        <i class="bi bi-book"></i> Читать
+                                                    </a>
+                                                </div>
+                                                <div class="text-end">
+                                                    <?php
+                                                    $book_stats = $book_model->getBookStats($book['id'], true);
+                                                    ?>
+                                                    <small class="text-muted">
+                                                        Глав: <?= $book_stats['chapter_count'] ?? 0 ?> | 
+                                                        Слов: <?= $book_stats['total_words'] ?? 0 ?>
+                                                    </small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
+
+                    <footer class="text-center mt-5 pt-4 border-top">
+                        <p class="text-muted">
+                            Серия создана в <?= e(APP_NAME) ?> • 
+                            Автор: <a href="<?= SITE_URL ?>/author/<?= $author['id'] ?>"><?= e($author['display_name'] ?: $author['username']) ?></a>
+                        </p>
+                    </footer>
+                </div>
+            </article>
+        </div>
+    </div>
 </div>
 
 <style>
-.series-books article {
+.card {
     transition: transform 0.2s ease, box-shadow 0.2s ease;
-    border: 1px solid var(--border-color);
 }
 
-.series-books article:hover {
+.card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-}
-
-@media (max-width: 768px) {
-    .series-books article {
-        flex-direction: column;
-        text-align: center;
-    }
-    
-    .series-books .book-cover {
-        align-self: center;
-    }
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
 }
 </style>
 

@@ -2,61 +2,72 @@
 include 'views/layouts/header.php';
 ?>
 
-<h1>Новая глава для: <?= e($book['title']) ?></h1>
-
-<?php if (isset($error) && $error): ?>
-    <div class="alert alert-error">
-        <?= e($error) ?>
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h2">Новая глава для: <?= e($book['title']) ?></h1>
+        <a href="<?= SITE_URL ?>/books/<?= $book['id'] ?>/chapters" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Назад к главам
+        </a>
     </div>
-<?php endif; ?>
 
-<form method="post" id="chapter-form">
-    <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
-
-    <div style="margin-bottom: 1rem;">
-        <label for="title" style="display: block; margin-bottom: 0.5rem; font-weight: bold;">
-            Название главы *
-        </label>
-        <input type="text" id="title" name="title" 
-               value="<?= e($_POST['title'] ?? '') ?>" 
-               placeholder="Введите название главы" 
-               style="width: 100%; margin-bottom: 1.5rem;" 
-               required>
-
-        <label for="content" style="display: block; margin-bottom: 0.5rem; font-weight: bold;">
-            Содержание главы *
-        </label>
-        <!-- Контейнер Quill -->
-        <div id="quill-editor"
-             class="writer-editor-container"
-             style="height:500px;"
-             data-content="<?= htmlspecialchars($_POST['content'] ?? '', ENT_QUOTES) ?>">
+    <?php if (isset($error) && $error): ?>
+        <div class="alert alert-danger">
+            <?= e($error) ?>
         </div>
-        <!-- Скрытый textarea для формы -->
-        <textarea id="content" name="content" style="display:none;"><?= e($_POST['content'] ?? '') ?></textarea>
+    <?php endif; ?>
 
-        <div style="margin-top: 1rem;">
-            <label for="status" style="display: block; margin-bottom: 0.5rem; font-weight: bold;">
-                Статус главы
-            </label>
-            <select id="status" name="status" style="width: 100%;">
-                <option value="draft" <?= (($_POST['status'] ?? 'draft') == 'draft') ? 'selected' : '' ?>>📝 Черновик</option>
-                <option value="published" <?= (($_POST['status'] ?? '') == 'published') ? 'selected' : '' ?>>✅ Опубликована</option>
-            </select>
-            <small style="color: var(--muted-color);">
-                Опубликованные главы видны в публичном доступе
-            </small>
+    <div class="card">
+        <div class="card-body">
+            <form method="post" id="chapter-form">
+                <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
+
+                <div class="mb-3">
+                    <label for="title" class="form-label">Название главы *</label>
+                    <input type="text" class="form-control" id="title" name="title" 
+                           value="<?= e($_POST['title'] ?? '') ?>" 
+                           placeholder="Введите название главы" required>
+                </div>
+
+                <div class="mb-3">
+                    <label for="content" class="form-label">Содержание главы *</label>
+                    <!-- Контейнер Quill -->
+                    <div id="quill-editor"
+                         class="writer-editor-container"
+                         style="height:500px;"
+                         data-content="<?= htmlspecialchars($_POST['content'] ?? '', ENT_QUOTES) ?>">
+                    </div>
+                    <!-- Скрытый textarea для формы -->
+                    <textarea id="content" name="content" style="display:none;"><?= e($_POST['content'] ?? '') ?></textarea>
+                </div>
+
+                <div class="mb-4">
+                    <label for="status" class="form-label">Статус главы</label>
+                    <select class="form-select" id="status" name="status">
+                        <option value="draft" <?= (($_POST['status'] ?? 'draft') == 'draft') ? 'selected' : '' ?>>📝 Черновик</option>
+                        <option value="published" <?= (($_POST['status'] ?? '') == 'published') ? 'selected' : '' ?>>✅ Опубликована</option>
+                    </select>
+                    <div class="form-text">
+                        Опубликованные главы видны в публичном доступе
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-circle"></i> Сохранить главу
+                    </button>
+                    <button type="button" onclick="previewChapter()" class="btn btn-outline-secondary">
+                        <i class="bi bi-eye"></i> Предпросмотр
+                    </button>
+                    <a href="<?= SITE_URL ?>/books/<?= $book['id'] ?>/chapters" class="btn btn-outline-danger">
+                        <i class="bi bi-x-circle"></i> Отмена
+                    </a>
+                </div>
+            </form>
         </div>
     </div>
+</div>
 
-    <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 1.5rem;">
-        <button type="submit" class="contrast">💾 Сохранить главу</button>
-        <button type="button" onclick="previewChapter()" class="secondary">👁️ Предпросмотр</button>
-        <a href="<?= SITE_URL ?>/books/<?= $book['id'] ?>/chapters" role="button" class="secondary">❌ Отмена</a>
-    </div>
-</form>
-
-<link href="/assets/css/quill_reset.css" rel="stylesheet">
+<!-- <link href="/assets/css/quill_reset.css" rel="stylesheet"> -->
 <script>
 function previewChapter() {
     const form = document.getElementById('chapter-form');

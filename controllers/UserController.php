@@ -108,6 +108,7 @@ class UserController extends BaseController {
             'total_books' => $total_books,
             'total_words' => $total_words,
             'total_chapters' => $total_chapters,
+            'book_model'=>$bookModel,
             'page_title' => ($user['display_name'] ?: $user['username']) . ' — публичная страница'
         ]);
     }

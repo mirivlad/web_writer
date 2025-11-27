@@ -1,80 +1,122 @@
+// views/chapters/edit.php
 <?php
 // views/chapters/edit.php
 include 'views/layouts/header.php';
 ?>
 
-<h1>Редактирование главы: <?= e($chapter['title']) ?></h1>
-
-<?php if (isset($error) && $error): ?>
-    <div class="alert alert-error">
-        <?= e($error) ?>
-    </div>
-<?php endif; ?>
-
-<form method="post" id="chapter-form">
-    <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
-    
-    <div style="margin-bottom: 1rem;">
-        <label for="title" style="display: block; margin-bottom: 0.5rem; font-weight: bold;">
-            Название главы *
-        </label>
-        <input type="text" id="title" name="title" 
-               value="<?= e($chapter['title']) ?>" 
-               placeholder="Введите название главы" 
-               style="width: 100%; margin-bottom: 1.5rem;" 
-               required>
-        
-        <label for="content" style="display: block; margin-bottom: 0.5rem; font-weight: bold;">
-            Содержание главы *
-        </label>
-        <!-- Контейнер Quill -->
-        <div id="quill-editor"
-             class="writer-editor-container"
-             style="height:500px;"
-             data-content="<?= htmlspecialchars($chapter['content'] ?? '', ENT_QUOTES) ?>">
-        </div>
-
-        <!-- Скрытый textarea для формы -->
-        <textarea id="content" name="content" style="display:none;"></textarea>
-            
-        
-        <div style="margin-top: 1rem;">
-            <label for="status" style="display: block; margin-bottom: 0.5rem; font-weight: bold;">
-                Статус главы
-            </label>
-            <select id="status" name="status" style="width: 100%;">
-                <option value="draft" <?= ($chapter['status'] == 'draft') ? 'selected' : '' ?>>📝 Черновик</option>
-                <option value="published" <?= ($chapter['status'] == 'published') ? 'selected' : '' ?>>✅ Опубликована</option>
-            </select>
-            <small style="color: var(--muted-color);">
-                Опубликованные главы видны в публичном доступе
-            </small>
-        </div>
-    </div>
-    
-    <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 1.5rem;">
-        <button type="submit" class="contrast">
-            💾 Сохранить изменения
-        </button>
-        
-        <button type="button" onclick="previewChapter()" class="secondary">
-            👁️ Предпросмотр
-        </button>
-        
-        <a href="<?= SITE_URL ?>/books/<?= $book['id'] ?>/chapters" role="button" class="secondary">
-            ❌ Отмена
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h2">Редактирование главы: <?= e($chapter['title']) ?></h1>
+        <a href="<?= SITE_URL ?>/books/<?= $book['id'] ?>/chapters" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Назад к главам
         </a>
     </div>
-</form>
 
-<div style="margin-top: 2rem; padding: 1rem; background: var(--card-background-color); border-radius: 5px;">
-    <h3>Информация о главе</h3>
-    <p><strong>Книга:</strong> <a href="<?= SITE_URL ?>/books/<?= $book['id'] ?>/edit"><?= e($book['title']) ?></a></p>
-    <p><strong>Количество слов:</strong> <?= $chapter['word_count'] ?></p>
-    <p><strong>Создана:</strong> <?= date('d.m.Y H:i', strtotime($chapter['created_at'])) ?></p>
-    <p><strong>Обновлена:</strong> <?= date('d.m.Y H:i', strtotime($chapter['updated_at'])) ?></p>
+    <?php if (isset($error) && $error): ?>
+        <div class="alert alert-danger">
+            <?= e($error) ?>
+        </div>
+    <?php endif; ?>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Содержание главы</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="chapter-form">
+                        <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
+                        
+                        <div class="mb-3">
+                            <label for="title" class="form-label">Название главы *</label>
+                            <input type="text" class="form-control" id="title" name="title" 
+                                   value="<?= e($chapter['title']) ?>" 
+                                   placeholder="Введите название главы" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="content" class="form-label">Содержание главы *</label>
+                            <!-- Контейнер Quill -->
+                            <div id="quill-editor"
+                                 class="writer-editor-container"
+                                 style="height:500px;"
+                                 data-content="<?= htmlspecialchars($chapter['content'] ?? '', ENT_QUOTES) ?>">
+                            </div>
+                            <!-- Скрытый textarea для формы -->
+                            <textarea id="content" name="content" style="display:none;"></textarea>
+                        </div>
+                            
+                        <div class="mb-4">
+                            <label for="status" class="form-label">Статус главы</label>
+                            <select class="form-select" id="status" name="status">
+                                <option value="draft" <?= ($chapter['status'] == 'draft') ? 'selected' : '' ?>>📝 Черновик</option>
+                                <option value="published" <?= ($chapter['status'] == 'published') ? 'selected' : '' ?>>✅ Опубликована</option>
+                            </select>
+                            <div class="form-text">
+                                Опубликованные главы видны в публичном доступе
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex gap-2 flex-wrap">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle"></i> Сохранить изменения
+                            </button>
+                            
+                            <button type="button" onclick="previewChapter()" class="btn btn-outline-secondary">
+                                <i class="bi bi-eye"></i> Предпросмотр
+                            </button>
+                            
+                            <a href="<?= SITE_URL ?>/books/<?= $book['id'] ?>/chapters" class="btn btn-outline-danger">
+                                <i class="bi bi-x-circle"></i> Отмена
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Информация о главе</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <strong>Книга:</strong><br>
+                        <a href="<?= SITE_URL ?>/books/<?= $book['id'] ?>/edit" class="text-decoration-none">
+                            <?= e($book['title']) ?>
+                        </a>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <strong>Количество слов:</strong><br>
+                        <span class="text-primary fw-bold"><?= $chapter['word_count'] ?></span>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <strong>Создана:</strong><br>
+                        <small class="text-muted"><?= date('d.m.Y H:i', strtotime($chapter['created_at'])) ?></small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <strong>Обновлена:</strong><br>
+                        <small class="text-muted"><?= date('d.m.Y H:i', strtotime($chapter['updated_at'])) ?></small>
+                    </div>
+
+                    <div class="alert alert-info mt-3">
+                        <small>
+                            <i class="bi bi-info-circle"></i> 
+                            Автосохранение включено. Изменения сохраняются автоматически каждые 2 минуты.
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
-<link href="/assets/css/quill_reset.css" rel="stylesheet">
+
+<!-- <link href="/assets/css/quill_reset.css" rel="stylesheet"> -->
 <script>
 function previewChapter() {
     const form = document.getElementById('chapter-form');
@@ -100,11 +142,6 @@ function previewChapter() {
     titleInput.name = 'title';
     titleInput.value = document.getElementById('title').value || 'Предпросмотр главы';
     tempForm.appendChild(titleInput);
-    
-    const editorTypeInput = document.createElement('input');
-    editorTypeInput.name = 'editor_type';
-    editorTypeInput.value = '<?= $book['editor_type'] ?? 'markdown' ?>';
-    tempForm.appendChild(editorTypeInput);
     
     document.body.appendChild(tempForm);
     tempForm.submit();

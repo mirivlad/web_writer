@@ -185,6 +185,7 @@ class SeriesController extends BaseController {
             'author' => $author,
             'total_words' => $total_words,
             'total_chapters' => $total_chapters,
+            'book_model' => $bookModel,
             'page_title' => $series['title'] . ' — серия книг'
         ]);
     }

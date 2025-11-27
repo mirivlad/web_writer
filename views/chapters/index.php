@@ -41,57 +41,75 @@ include 'views/layouts/header.php';
         </div>
     <?php else: ?>
         <div class="card">
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-hover">
-                        <thead>
-                            <tr>
-                                <th style="width: 5%;">№</th>
-                                <th style="width: 40%;">Название главы</th>
-                                <th style="width: 15%;">Статус</th>
-                                <th style="width: 10%;">Слов</th>
-                                <th style="width: 20%;">Обновлено</th>
-                                <th style="width: 10%;">Действия</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($chapters as $index => $chapter): ?>
-                            <tr>
-                                <td><?= $index + 1 ?></td>
-                                <td>
-                                    <strong><?= e($chapter['title']) ?></strong>
-                                    <?php if ($chapter['content']): ?>
-                                        <br><small class="text-muted"><?= e(mb_strimwidth($chapter['content'], 0, 100, '...')) ?></small>
-                                    <?php endif; ?>
-                                </td>
-                                <td>
-                                    <span class="badge <?= $chapter['status'] == 'published' ? 'bg-success' : 'bg-warning' ?>">
-                                        <?= $chapter['status'] == 'published' ? 'Опубликована' : 'Черновик' ?>
-                                    </span>
-                                </td>
-                                <td><?= $chapter['word_count'] ?></td>
-                                <td>
-                                    <small><?= date('d.m.Y H:i', strtotime($chapter['updated_at'])) ?></small>
-                                </td>
-                                <td>
-                                    <div class="btn-group btn-group-sm">
-                                        <a href="<?= SITE_URL ?>/chapters/<?= $chapter['id'] ?>/edit" class="btn btn-outline-primary" title="Редактировать">
-                                            <i class="bi bi-pencil"></i>
-                                        </a>
-                                        <form method="post" action="<?= SITE_URL ?>/chapters/<?= $chapter['id'] ?>/delete" 
-                                              onsubmit="return confirm('Вы уверены, что хотите удалить эту главу? Это действие нельзя отменить.');">
-                                            <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
-                                            <button type="submit" class="btn btn-outline-danger" title="Удалить">
-                                                <i class="bi bi-trash"></i>
-                                            </button>
-                                        </form>
-                                    </div>
-                                </td>
-                            </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">Список глав</h5>
+                <div>
+                    <small class="text-muted me-3">Перетащите для изменения порядка</small>
+                    <button type="button" id="save-order-btn" class="btn btn-success btn-sm" style="display: none;">
+                        <i class="bi bi-check-circle"></i> Сохранить порядок
+                    </button>
                 </div>
+            </div>
+            <div class="card-body">
+                <form id="chapters-order-form" method="post" action="<?= SITE_URL ?>/books/<?= $book['id'] ?>/chapters/update-order">
+                    <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
+                    
+                    <div class="table-responsive">
+                        <table class="table table-hover" id="chapters-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 5%;"></th>
+                                    <th style="width: 5%;">№</th>
+                                    <th style="width: 35%;">Название главы</th>
+                                    <th style="width: 15%;">Статус</th>
+                                    <th style="width: 10%;">Слов</th>
+                                    <th style="width: 20%;">Обновлено</th>
+                                    <th style="width: 10%;">Действия</th>
+                                </tr>
+                            </thead>
+                            <tbody id="chapters-list">
+                                <?php foreach ($chapters as $index => $chapter): ?>
+                                <tr data-chapter-id="<?= $chapter['id'] ?>" class="chapter-item">
+                                    <td class="drag-handle text-muted" style="cursor: move;">
+                                        <i class="bi bi-grip-vertical"></i>
+                                    </td>
+                                    <td class="chapter-order"><?= $index + 1 ?></td>
+                                    <td>
+                                        <strong><?= e($chapter['title']) ?></strong>
+                                        <?php if ($chapter['content']): ?>
+                                            <br><small class="text-muted"><?= e(mb_strimwidth($chapter['content'], 0, 100, '...')) ?></small>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <span class="badge <?= $chapter['status'] == 'published' ? 'bg-success' : 'bg-warning' ?>">
+                                            <?= $chapter['status'] == 'published' ? 'Опубликована' : 'Черновик' ?>
+                                        </span>
+                                    </td>
+                                    <td><?= $chapter['word_count'] ?></td>
+                                    <td>
+                                        <small><?= date('d.m.Y H:i', strtotime($chapter['updated_at'])) ?></small>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="<?= SITE_URL ?>/chapters/<?= $chapter['id'] ?>/edit" class="btn btn-outline-primary" title="Редактировать">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+                                            <form method="post" action="<?= SITE_URL ?>/chapters/<?= $chapter['id'] ?>/delete" 
+                                                  onsubmit="return confirm('Вы уверены, что хотите удалить эту главу? Это действие нельзя отменить.');">
+                                                <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
+                                                <button type="submit" class="btn btn-outline-danger" title="Удалить">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                    <input type="hidden" name="order[]" value="<?= $chapter['id'] ?>">
+                                </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </form>
             </div>
         </div>
 
@@ -113,5 +131,91 @@ include 'views/layouts/header.php';
         </div>
     <?php endif; ?>
 </div>
+
+<?php if (!empty($chapters)): ?>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const chaptersList = document.getElementById('chapters-list');
+    const saveOrderBtn = document.getElementById('save-order-btn');
+    const orderForm = document.getElementById('chapters-order-form');
+    
+    if (chaptersList) {
+        const sortable = new Sortable(chaptersList, {
+            handle: '.drag-handle',
+            ghostClass: 'sortable-ghost',
+            chosenClass: 'sortable-chosen',
+            animation: 150,
+            onUpdate: function() {
+                saveOrderBtn.style.display = 'block';
+                updateChapterNumbers();
+            }
+        });
+    }
+    
+    // Функция для обновления номеров глав
+    function updateChapterNumbers() {
+        const orderNumbers = document.querySelectorAll('.chapter-order');
+        orderNumbers.forEach((element, index) => {
+            element.textContent = index + 1;
+        });
+    }
+    
+    // Обработчик сохранения порядка
+    saveOrderBtn.addEventListener('click', function() {
+        const formData = new FormData(orderForm);
+        
+        fetch(orderForm.action, {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                saveOrderBtn.innerHTML = '<i class="bi bi-check-circle"></i> Порядок сохранен';
+                saveOrderBtn.classList.remove('btn-success');
+                saveOrderBtn.classList.add('btn-secondary');
+                
+                setTimeout(() => {
+                    saveOrderBtn.style.display = 'none';
+                    saveOrderBtn.innerHTML = '<i class="bi bi-check-circle"></i> Сохранить порядок';
+                    saveOrderBtn.classList.remove('btn-secondary');
+                    saveOrderBtn.classList.add('btn-success');
+                }, 2000);
+            } else {
+                alert('Ошибка: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Произошла ошибка при сохранении порядка');
+        });
+    });
+});
+</script>
+
+<style>
+.chapter-item {
+    transition: background-color 0.2s ease;
+    background: white;
+}
+
+.chapter-item:hover {
+    background: #f8f9fa;
+}
+
+.chapter-item.sortable-ghost {
+    opacity: 0.4;
+}
+
+.chapter-item.sortable-chosen {
+    background: #e3f2fd;
+}
+
+.drag-handle {
+    font-size: 1.2rem;
+}
+</style>
+<?php endif; ?>
 
 <?php include 'views/layouts/footer.php'; ?>

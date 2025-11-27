@@ -220,7 +220,40 @@ class ChapterController extends BaseController {
         ]);
     }
 
-    // Добавьте эту функцию в начало файла
+    public function updateOrder($book_id) {
+        $this->requireLogin();
+        
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            return $this->jsonResponse(['success' => false, 'error' => 'Неверный метод запроса']);
+        }
+
+        if (!verify_csrf_token($_POST['csrf_token'] ?? '')) {
+            return $this->jsonResponse(['success' => false, 'error' => 'Ошибка безопасности']);
+        }
+
+        $user_id = $_SESSION['user_id'];
+        $chapterModel = new Chapter($this->pdo);
+        $bookModel = new Book($this->pdo);
+
+        // Проверяем права доступа к книге
+        if (!$bookModel->userOwnsBook($book_id, $user_id)) {
+            return $this->jsonResponse(['success' => false, 'error' => 'У вас нет доступа к этой книге']);
+        }
+
+        $order_data = $_POST['order'] ?? [];
+        
+        if (empty($order_data)) {
+            return $this->jsonResponse(['success' => false, 'error' => 'Нет данных для обновления']);
+        }
+
+        // Обновляем порядок глав
+        if ($chapterModel->updateChaptersOrder($book_id, $order_data)) {
+            return $this->jsonResponse(['success' => true]);
+        } else {
+            return $this->jsonResponse(['success' => false, 'error' => 'Ошибка при обновлении порядка глав']);
+        }
+    }
+
     function cleanChapterContent($content) {
         // Удаляем лишние пробелы в начале и конце
         $content = trim($content);

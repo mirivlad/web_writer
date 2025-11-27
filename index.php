@@ -133,6 +133,7 @@ $router->add('/books/{book_id}/chapters/create', 'ChapterController@create');
 $router->add('/chapters/{id}/edit', 'ChapterController@edit');
 $router->add('/chapters/{id}/delete', 'ChapterController@delete');
 $router->add('/chapters/preview', 'ChapterController@preview');
+$router->add('/books/{id}/chapters/update-order', 'ChapterController@updateOrder');
 
 // Серии
 $router->add('/series', 'SeriesController@index');

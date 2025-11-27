@@ -20,33 +20,31 @@ class Chapter {
     }
     
     public function findByBook($book_id) {
-        $stmt = $this->pdo->prepare("
-            SELECT * FROM chapters 
-            WHERE book_id = ? 
-            ORDER BY sort_order, created_at
-        ");
+        $stmt = $this->pdo->prepare("SELECT * FROM chapters WHERE book_id = ? ORDER BY sort_order ASC, id ASC");
         $stmt->execute([$book_id]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
     
     public function create($data) {
+        // Получаем максимальный порядковый номер для этой книги
         $stmt = $this->pdo->prepare("SELECT MAX(sort_order) as max_order FROM chapters WHERE book_id = ?");
         $stmt->execute([$data['book_id']]);
-        $result = $stmt->fetch();
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
         $next_order = ($result['max_order'] ?? 0) + 1;
-        
-        $word_count = $this->countWords($data['content']);
-        
+
         $stmt = $this->pdo->prepare("
-            INSERT INTO chapters (book_id, title, content, sort_order, word_count, status) 
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO chapters (book_id, title, content, word_count, sort_order, status, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())
         ");
+
+        $word_count = str_word_count(strip_tags($data['content']));
+
         return $stmt->execute([
             $data['book_id'],
             $data['title'],
             $data['content'],
-            $next_order,
             $word_count,
+            $next_order,
             $data['status'] ?? 'draft'
         ]);
     }
@@ -108,21 +106,24 @@ class Chapter {
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    // private function getAllChapters($book_id) {
-    //     $stmt = $this->pdo->prepare("SELECT id, content FROM chapters WHERE book_id = ?");
-    //     $stmt->execute([$book_id]);
-    //     return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    // }
-
-    // private function updateChapterContent($chapter_id, $content) {
-    //     $word_count = $this->countWords($content);
-    //     $stmt = $this->pdo->prepare("
-    //         UPDATE chapters 
-    //         SET content = ?, word_count = ?, updated_at = CURRENT_TIMESTAMP 
-    //         WHERE id = ?
-    //     ");
-    //     return $stmt->execute([$content, $word_count, $chapter_id]);
-    // }
+    public function updateChaptersOrder($book_id, $chapter_ids) {
+        try {
+            $this->pdo->beginTransaction();
+            
+            // Обновляем порядок для каждой главы
+            foreach ($chapter_ids as $index => $chapter_id) {
+                $stmt = $this->pdo->prepare("UPDATE chapters SET sort_order = ? WHERE id = ? AND book_id = ?");
+                $stmt->execute([$index + 1, $chapter_id, $book_id]);
+            }
+            
+            $this->pdo->commit();
+            return true;
+        } catch (Exception $e) {
+            $this->pdo->rollBack();
+            error_log("Error updating chapters order: " . $e->getMessage());
+            return false;
+        }
+    }
 
 }
 ?>

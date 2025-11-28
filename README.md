@@ -55,14 +55,17 @@
 <a href="/mirivlad/web_writer/raw/branch/main/assets/images/screens/11.jpg" target="_blank"><img src="assets/images/screens/11.jpg" alt="Просмотр книги" height="200"  /></a>
 ---
 
-## ⚙️ Требования
+## ⚙️ Требования и используемые технологии
 
 - **PHP:** 8.0 и выше  
 - **MySQL** с InnoDB и внешними ключами  
 - **PHP расширения:** `mbstring`, `json`, `PDO`  
-- Веб-сервер с правами на запись в папки `config/` и `uploads/`  
+- **Веб-сервер** (Nginx/Apache) с правами на запись в папки `config/` и `uploads/`  
 
-> Composer не нужен. Все библиотеки уже включены в `vendor/`. 
+- Самописный MVC на PHP + MySQL - максимальная простота и скорость
+- Bootstrap5 и темы для него для UI
+- Javascript - Quill.js (редактор текста), Sortable.js - для Drag'n'Drop сортировки. Стандартный bundle Bootstrap5. Всё остальное - самописный JS
+- TCPDF и PhpWord - для экспорта книг
 
 ---
 
@@ -132,6 +135,8 @@ web_writer/
 - Возможно, добавится поддержка комментариев для публичных книг и рейтинг. Но это не точно :)
 
 ---
+
+
 
 ## ❗ Поддержка
 

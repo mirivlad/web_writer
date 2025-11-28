@@ -35,24 +35,24 @@
 **Панель управления и смена темы**
 
 <a href="assets/images/screens/5.jpg" target="_blank"><img src="assets/images/screens/5.jpg" alt="Панель управления" height="300" /></a>
-<a href="assets/images/screens/3.jpg" target="_blank"><img src="assets/images/screens/3.jpg" alt="Смена темы" height="300"  />
-<a href="assets/images/screens/2.jpg" target="_blank"><img src="assets/images/screens/2.jpg" alt="Панель управления после смены темы" height="300" />
+<a href="assets/images/screens/3.jpg" target="_blank"><img src="assets/images/screens/3.jpg" alt="Смена темы" height="300"  /></a>
+<a href="assets/images/screens/2.jpg" target="_blank"><img src="assets/images/screens/2.jpg" alt="Панель управления после смены темы" height="300" /></a>
 
 **Редактор текста**
 
-<a href="assets/images/screens/10.jpg" target="_blank"><img src="assets/images/screens/10.jpg" alt="Редактор текста Quill" height="300"  />
+<a href="assets/images/screens/10.jpg" target="_blank"><img src="assets/images/screens/10.jpg" alt="Редактор текста Quill" height="300"  /></a>
 
 **Управление главами книги**
 
-<a href="assets/images/screens/9.jpg" target="_blank"><img src="assets/images/screens/9.jpg" alt="Управление главами книги" height="300"  />
+<a href="assets/images/screens/9.jpg" target="_blank"><img src="assets/images/screens/9.jpg" alt="Управление главами книги" height="300"  /></a>
 
 **Управление сериями книг**
 
-<a href="assets/images/screens/6.jpg" target="_blank"><img src="assets/images/screens/6.jpg" alt="Управление сериями книг" height="300"  />
+<a href="assets/images/screens/6.jpg" target="_blank"><img src="assets/images/screens/6.jpg" alt="Управление сериями книг" height="300"  /></a>
 
 **Просмотр книги**
 
-<a href="assets/images/screens/11.jpg" target="_blank"><img src="assets/images/screens/11.jpg" alt="Просмотр книги" height="300"  />
+<a href="assets/images/screens/11.jpg" target="_blank"><img src="assets/images/screens/11.jpg" alt="Просмотр книги" height="300"  /></a>
 ---
 
 ## ⚙️ Требования

@@ -19,3 +19,27 @@
         height: 16px;
     }
 }
+
+/* editor styles */
+@media (max-width: 768px) {
+    .writer-editor-container .ql-container {
+        font-size: 16px !important; /* Предотвращает масштабирование в iOS */
+    }
+    
+    .writer-editor-container .ql-toolbar {
+        padding: 8px !important;
+    }
+    
+    .writer-editor-container .ql-toolbar .ql-formats {
+        margin-right: 8px !important;
+    }
+}
+
+/* Стили для полноэкранного режима */
+.ql-toolbar.ql-snow {
+    transition: all 0.3s ease;
+}
+
+.writer-editor-container.fullscreen {
+    transition: all 0.3s ease;
+}

@@ -37,7 +37,7 @@ class Chapter {
             VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())
         ");
 
-        $word_count = str_word_count(strip_tags($data['content']));
+        $word_count = $this->countWords($data['content']);
 
         return $stmt->execute([
             $data['book_id'],

@@ -555,67 +555,123 @@ class ExportController extends BaseController {
     }
 
     function exportTXT($book, $chapters, $is_public, $author_name) {
-        $content = "=" . str_repeat("=", 80) . "=\n";
-        $content .= str_pad($book['title'], 80, " ", STR_PAD_BOTH) . "\n";
-        $content .= str_pad($author_name, 80, " ", STR_PAD_BOTH) . "\n";
-        $content .= "=" . str_repeat("=", 80) . "=\n\n";
-        
-        if (!empty($book['genre'])) {
-            $content .= "Жанр: " . $book['genre'] . "\n\n";
-        }
-        
-        if (!empty($book['description'])) {
-            $content .= "ОПИСАНИЕ:\n";
-            
-            // Обрабатываем описание
-            $descriptionText = strip_tags($book['description']);
-            $content .= wordwrap($descriptionText, 144) . "\n\n";
-        }
-        
-        // Оглавление
-        if (!empty($chapters)) {
-            $content .= "ОГЛАВЛЕНИЕ:\n";
-            $content .= str_repeat("-", 60) . "\n";
-            foreach ($chapters as $index => $chapter) {
-                $chapter_number = $index + 1;
-                $content .= "{$chapter_number}. {$chapter['title']}\n";
-            }
-            $content .= "\n";
-        }
-        
-        $content .= str_repeat("-", 144) . "\n\n";
-        
-        foreach ($chapters as $index => $chapter) {
-            $content .= $chapter['title'] . "\n";
-            $content .= str_repeat("-", 60) . "\n\n";
-            
-            // Получаем очищенный текст
-            $cleanContent = strip_tags($chapter['content']);
-            $paragraphs = $this->htmlToPlainTextParagraphs($cleanContent);
-            
-            foreach ($paragraphs as $paragraph) {
-                if (!empty(trim($paragraph))) {
-                    $content .= wordwrap($paragraph, 144) . "\n\n";
-                }
-            }
-            
-            if ($index < count($chapters) - 1) {
-                $content .= str_repeat("-", 144) . "\n\n";
-            }
-        }
-        
-        $content .= "\n" . str_repeat("=", 144) . "\n";
-        $content .= "Экспортировано из " . APP_NAME . " - " . date('d.m.Y H:i') . "\n";
-        $content .= "Автор: " . $author_name . " | Всего глав: " . count($chapters) . " | Всего слов: " . array_sum(array_column($chapters, 'word_count')) . "\n";
-        $content .= str_repeat("=", 144) . "\n";
-        
-        $filename = cleanFilename($book['title']) . '.txt';
-        header('Content-Type: text/plain; charset=utf-8');
-        header('Content-Disposition: attachment; filename="' . $filename . '"');
-        echo $content;
-        exit;
-    }
-
+		$content = "=" . str_repeat("=", 80) . "=\n";
+		$content .= str_pad($book['title'], 80, " ", STR_PAD_BOTH) . "\n";
+		$content .= str_pad($author_name, 80, " ", STR_PAD_BOTH) . "\n";
+		$content .= "=" . str_repeat("=", 80) . "=\n\n";
+		
+		if (!empty($book['genre'])) {
+			$content .= "Жанр: " . $book['genre'] . "\n\n";
+		}
+		
+		if (!empty($book['description'])) {
+			$content .= "ОПИСАНИЕ:\n";
+			
+			// Обрабатываем описание, сохраняя абзацы
+			$descriptionText = $this->htmlToPlainText($book['description']);
+			$descriptionLines = explode("\n", $descriptionText);
+			foreach ($descriptionLines as $line) {
+				if (trim($line) !== '') {
+					$content .= wordwrap(trim($line), 144) . "\n";
+				}
+			}
+			$content .= "\n";
+		}
+		
+		// Оглавление
+		if (!empty($chapters)) {
+			$content .= "ОГЛАВЛЕНИЕ:\n";
+			$content .= str_repeat("-", 60) . "\n";
+			foreach ($chapters as $index => $chapter) {
+				$chapter_number = $index + 1;
+				$content .= "{$chapter_number}. {$chapter['title']}\n";
+			}
+			$content .= "\n";
+		}
+		
+		$content .= str_repeat("-", 144) . "\n\n";
+		
+		foreach ($chapters as $index => $chapter) {
+			$content .= $chapter['title'] . "\n";
+			$content .= str_repeat("-", 60) . "\n\n";
+			
+			// Используем новый метод для преобразования HTML в текст с сохранением абзацев
+			$plainText = $this->htmlToPlainText($chapter['content']);
+			$paragraphs = explode("\n", $plainText);
+			
+			foreach ($paragraphs as $paragraph) {
+				$trimmed = trim($paragraph);
+				if (!empty($trimmed)) {
+					// Оборачиваем текст с учетом ширины строки
+					$wrapped = wordwrap($trimmed, 144);
+					$content .= $wrapped . "\n\n";
+				}
+			}
+			
+			if ($index < count($chapters) - 1) {
+				$content .= str_repeat("-", 144) . "\n\n";
+			}
+		}
+		
+		$content .= "\n" . str_repeat("=", 144) . "\n";
+		$content .= "Экспортировано из " . APP_NAME . " - " . date('d.m.Y H:i') . "\n";
+		$content .= "Автор: " . $author_name . " | Всего глав: " . count($chapters) . " | Всего слов: " . array_sum(array_column($chapters, 'word_count')) . "\n";
+		$content .= str_repeat("=", 144) . "\n";
+		
+		$filename = cleanFilename($book['title']) . '.txt';
+		header('Content-Type: text/plain; charset=utf-8');
+		header('Content-Disposition: attachment; filename="' . $filename . '"');
+		echo $content;
+		exit;
+	}
+	private function htmlToPlainText($html) {
+		if (empty($html)) {
+			return '';
+		}
+		
+		// Заменяем HTML-сущности
+		$text = html_entity_decode($html, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+		
+		// Сохраняем структуру абзацев
+		// Заменяем теги <p> и <div> на переносы строк
+		$text = preg_replace('/<(p|div)[^>]*>/i', "\n", $text);
+		$text = str_replace(['</p>', '</div>'], "\n", $text);
+		
+		// Заменяем <br> и <br/> на переносы строк
+		$text = preg_replace('/<br\s*\/?>/i', "\n", $text);
+		
+		// Заменяем HTML списки на текстовые
+		$text = preg_replace('/<li[^>]*>/i', "• ", $text);
+		$text = str_replace('</li>', "\n", $text);
+		$text = str_replace(['<ul>', '</ul>', '<ol>', '</ol>'], "\n", $text);
+		
+		// Заменяем заголовки
+		$text = preg_replace('/<h[1-6][^>]*>/i', "\n", $text);
+		$text = preg_replace('/<\/h[1-6]>/i', "\n\n", $text);
+		
+		// Удаляем все остальные теги
+		$text = strip_tags($text);
+		
+		// Удаляем лишние пробелы
+		$text = preg_replace('/[ \t]+/', ' ', $text);
+		
+		// Удаляем лишние переносы строк (более 2 подряд)
+		$text = preg_replace('/\n{3,}/', "\n\n", $text);
+		
+		// Удаляем пробелы в начале и конце строк
+		$lines = explode("\n", $text);
+		$lines = array_map('trim', $lines);
+		
+		// Фильтруем пустые строки
+		$lines = array_filter($lines, function($line) {
+			return $line !== '';
+		});
+		
+		// Объединяем обратно
+		$text = implode("\n", $lines);
+		
+		return trim($text);
+	}
     // Функция для разбивки HTML на абзацы
     function htmlToParagraphs($html) {
         // Убираем HTML теги и нормализуем пробелы

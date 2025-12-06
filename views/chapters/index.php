@@ -90,19 +90,18 @@ include 'views/layouts/header.php';
                                         <small><?= date('d.m.Y H:i', strtotime($chapter['updated_at'])) ?></small>
                                     </td>
                                     <td>
-                                        <div class="btn-group btn-group-sm">
-                                            <a href="<?= SITE_URL ?>/chapters/<?= $chapter['id'] ?>/edit" class="btn btn-outline-primary" title="Редактировать">
-                                                <i class="bi bi-pencil"></i>
-                                            </a>
-                                            <form method="post" action="<?= SITE_URL ?>/chapters/<?= $chapter['id'] ?>/delete" 
-                                                  onsubmit="return confirm('Вы уверены, что хотите удалить эту главу? Это действие нельзя отменить.');">
-                                                <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
-                                                <button type="submit" class="btn btn-outline-danger" title="Удалить">
-                                                    <i class="bi bi-trash"></i>
-                                                </button>
-                                            </form>
-                                        </div>
-                                    </td>
+										<div class="btn-group btn-group-sm">
+											<a href="<?= SITE_URL ?>/chapters/<?= $chapter['id'] ?>/edit" class="btn btn-outline-primary" title="Редактировать">
+												<i class="bi bi-pencil"></i>
+											</a>
+											<button type="button" class="btn btn-outline-danger delete-chapter-btn" 
+													data-chapter-id="<?= $chapter['id'] ?>" 
+													data-csrf="<?= generate_csrf_token() ?>"
+													title="Удалить">
+												<i class="bi bi-trash"></i>
+											</button>
+										</div>
+									</td>
                                     <input type="hidden" name="order[]" value="<?= $chapter['id'] ?>">
                                 </tr>
                                 <?php endforeach; ?>
@@ -191,6 +190,66 @@ document.addEventListener('DOMContentLoaded', function() {
             alert('Произошла ошибка при сохранении порядка');
         });
     });
+});
+document.addEventListener('DOMContentLoaded', function() {
+    // Обработчик удаления глав
+    document.querySelectorAll('.delete-chapter-btn').forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            const chapterId = this.getAttribute('data-chapter-id');
+            const csrfToken = this.getAttribute('data-csrf');
+            
+            if (confirm('Вы уверены, что хотите удалить эту главу? Это действие нельзя отменить.')) {
+                const formData = new FormData();
+                formData.append('csrf_token', csrfToken);
+                
+                fetch(`/chapters/${chapterId}/delete`, {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => {
+                    if (response.redirected) {
+                        window.location.href = response.url;
+                    } else {
+                        return response.json();
+                    }
+                })
+                .then(data => {
+                    if (data && data.success) {
+                        // Удаляем строку таблицы
+                        const row = document.querySelector(`tr[data-chapter-id="${chapterId}"]`);
+                        if (row) {
+                            row.remove();
+                            // Обновляем номера глав
+                            updateChapterNumbers();
+                            showNotification('Глава успешно удалена', 'success');
+                        }
+                    } else if (data && data.error) {
+                        alert('Ошибка: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Произошла ошибка при удалении главы');
+                });
+            }
+        });
+    });
+    
+    // Функция для обновления номеров глав
+    function updateChapterNumbers() {
+        const orderNumbers = document.querySelectorAll('.chapter-order');
+        orderNumbers.forEach((element, index) => {
+            element.textContent = index + 1;
+        });
+    }
+    
+    // Функция для показа уведомлений
+    function showNotification(message, type = 'success') {
+        // Можно использовать библиотеку для уведомлений или простой alert
+        alert(message);
+    }
 });
 </script>
 
